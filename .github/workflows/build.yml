@@ -90,9 +90,12 @@ jobs:
       - name: Build iOS Archive
         working-directory: ios
         run: |
+          WORKSPACE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
+          SCHEME=$(basename *.xcodeproj .xcodeproj 2>/dev/null | head -n 1)
+          echo "Bulunan Workspace: $WORKSPACE, Scheme: $SCHEME"
           xcodebuild \
-            -workspace Prototype.xcworkspace \
-            -scheme Prototype \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
@@ -105,7 +108,8 @@ jobs:
       - name: Package IPA
         run: |
           mkdir -p ios/build/Payload
-          cp -r ios/build/Prototype.xcarchive/Products/Applications/Prototype.app ios/build/Payload/
+          APP_PATH=$(find ios/build/Prototype.xcarchive/Products/Applications -name "*.app" | head -n 1)
+          cp -r "$APP_PATH" ios/build/Payload/
           cd ios/build && zip -r Prototype.ipa Payload
 
       - name: Upload IPA Artifact
