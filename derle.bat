@@ -106,15 +106,35 @@ echo  3. DERLENEN DOSYALARI INDIR
 echo ======================================================
 echo.
 if not exist "ciktilar" mkdir "ciktilar"
+
+echo Son derleme paketleri:
+echo ------------------------------------------------------
+call gh run list --repo !REPO_NAME! --limit 5
+echo ------------------------------------------------------
+echo.
+echo   [Enter] : En son tamamlanan derlemenin dosyalarini indir (Varsayilan)
+echo   [Run ID]: Yukarida listelenen spesifik bir Run ID girin (Ornek: 31369773204)
+echo   [0]      : Ana Menuye Don
+echo.
+set /p RUN_ID=Indirmek istediginiz Run ID veya [Enter]: 
+
+if "%RUN_ID%"=="0" goto MENU
+
+echo.
 echo Dosyalar GitHub'dan indiriliyor...
-call gh run download --repo !REPO_NAME! --dir "ciktilar"
+if "%RUN_ID%"=="" (
+    call gh run download --repo !REPO_NAME! --clobber --dir "ciktilar"
+) else (
+    call gh run download %RUN_ID% --repo !REPO_NAME! --clobber --dir "ciktilar"
+)
+
 if %errorlevel% equ 0 (
     echo.
-    echo [BASARILI] APK ve IPA dosyalari 'ciktilar' klasorune indirildi!
+    echo [BASARILI] APK ve IPA dosyalari 'ciktilar' klasorune indirildi (Varsa eski dosyalarin uzerine yazildi)!
     explorer "ciktilar"
 ) else (
     echo.
-    echo [BILGI] Henuz tamamlanmis bir derleme bulunamadi.
+    echo [BILGI] Belirtilen derleme indirilemedi veya tamamlanmis bir derleme bulunamadi.
     echo Lutfen Actions sayfasinda derlemenin bitmesini bekleyin.
 )
 echo.
