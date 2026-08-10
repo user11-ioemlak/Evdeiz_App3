@@ -116,25 +116,29 @@ echo   [Enter] : En son tamamlanan derlemenin dosyalarini indir (Varsayilan)
 echo   [Run ID]: Yukarida listelenen spesifik bir Run ID girin (Ornek: 31369773204)
 echo   [0]      : Ana Menuye Don
 echo.
+set RUN_ID=
 set /p RUN_ID=Indirmek istediginiz Run ID veya [Enter]: 
 
 if "%RUN_ID%"=="0" goto MENU
 
 echo.
-echo Dosyalar GitHub'dan indiriliyor...
+echo Eski dosyalar temizleniyor ve yenileri indiriliyor...
+del /q /f "ciktilar\*.*" 2>nul
+for /d %%D in ("ciktilar\*") do rmdir /s /q "%%D" 2>nul
+
 if "%RUN_ID%"=="" (
-    call gh run download --repo !REPO_NAME! --clobber --dir "ciktilar"
+    call gh run download --repo !REPO_NAME! --dir "ciktilar"
 ) else (
-    call gh run download %RUN_ID% --repo !REPO_NAME! --clobber --dir "ciktilar"
+    call gh run download %RUN_ID% --repo !REPO_NAME! --dir "ciktilar"
 )
 
 if %errorlevel% equ 0 (
     echo.
-    echo [BASARILI] APK ve IPA dosyalari 'ciktilar' klasorune indirildi (Varsa eski dosyalarin uzerine yazildi)!
+    echo [BASARILI] APK ve IPA dosyalari 'ciktilar' klasorune indirildi!
     explorer "ciktilar"
 ) else (
     echo.
-    echo [BILGI] Belirtilen derleme indirilemedi veya tamamlanmis bir derleme bulunamadi.
+    echo [BILGI] Belirtilen derleme indirilemedi veya henuz tamamlanmis bir derleme bulunamadi.
     echo Lutfen Actions sayfasinda derlemenin bitmesini bekleyin.
 )
 echo.
