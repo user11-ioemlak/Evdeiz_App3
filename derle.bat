@@ -296,7 +296,7 @@ goto MENU
 :UPDATE_ENV
 cls
 echo ======================================================
-echo  8. DERLEME MODU VE CANLI SITE ADRESI DEGISTIR
+echo  8. DERLEME MODU VE BAGLANTI ADRESLERINI GUNCELLE
 echo ======================================================
 echo.
 set CURR_ENV=
@@ -312,35 +312,69 @@ for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
 )
 
 echo Mevcut Ayarlar:
-echo   Derleme Modu   : !CURR_ENV!
-echo   Aktif Adres    : !CURR_ACTIVE_URL!
-echo   Test IP Adresi : !CURR_TEST_URL!
-echo   Canli Site URL : !CURR_LIVE_URL!
+echo ------------------------------------------------------
+echo   Aktif Derleme Modu : !CURR_ENV!
+echo   Aktif Baglanti URL : !CURR_ACTIVE_URL!
+echo   Test IP Adresi     : !CURR_TEST_URL!
+echo   Canli Site URL     : !CURR_LIVE_URL!
+echo ------------------------------------------------------
 echo.
-echo Hangi modu aktif etmek istersiniz?
-echo   1. Test Modu (Yerel IP: !CURR_TEST_URL!)
-echo   2. Canli Mod (Canli Site: !CURR_LIVE_URL!)
+echo Yapmak istediginiz islem:
+echo   1. Sadece Modu Degistir (Test <-> Canli)
+echo   2. Test IP Adresini Guncelle (Mevcut: !CURR_TEST_URL!)
+echo   3. Canli Site URL'sini Guncelle (Mevcut: !CURR_LIVE_URL!)
+echo   4. Tum Ayarlari Degistir (Mod + Test IP + Canli URL)
 echo   0. Ana Menuye Don
 echo.
-set /p MOD_SEC=Seciminiz [0-2]: 
+set /p ENV_OPTION=Seciminiz [0-4]: 
 
-if "%MOD_SEC%"=="0" goto MENU
+if "%ENV_OPTION%"=="0" goto MENU
 
-set NEW_MODE=
-if "%MOD_SEC%"=="1" set NEW_MODE=test
-if "%MOD_SEC%"=="2" set NEW_MODE=live
+set NEW_MODE=-
+set NEW_TEST=-
+set NEW_LIVE=-
 
-echo.
-set /p NEW_LIVE=Canli Site URL (ENTER'a basarsaniz '!CURR_LIVE_URL!' kalir): 
-if "!NEW_LIVE!"=="" set NEW_LIVE=-
+if "%ENV_OPTION%"=="1" (
+    echo.
+    echo Mod Secimi:
+    echo   1. Test Modu (Yerel IP: !CURR_TEST_URL!)
+    echo   2. Canli Mod (Canli Site: !CURR_LIVE_URL!)
+    set /p M_CHOICE=Seciminiz [1-2]: 
+    if "!M_CHOICE!"=="1" set NEW_MODE=test
+    if "!M_CHOICE!"=="2" set NEW_MODE=live
+)
 
-set /p NEW_TEST=Test IP Adresi (ENTER'a basarsaniz '!CURR_TEST_URL!' kalir): 
+if "%ENV_OPTION%"=="2" (
+    echo.
+    set /p NEW_TEST=Yeni Test IP Adresi [!CURR_TEST_URL!]: 
+)
+
+if "%ENV_OPTION%"=="3" (
+    echo.
+    set /p NEW_LIVE=Yeni Canli Site URL [!CURR_LIVE_URL!]: 
+)
+
+if "%ENV_OPTION%"=="4" (
+    echo.
+    echo Mod Secimi:
+    echo   1. Test Modu
+    echo   2. Canli Mod
+    set /p M_CHOICE=Seciminiz [1-2]: 
+    if "!M_CHOICE!"=="1" set NEW_MODE=test
+    if "!M_CHOICE!"=="2" set NEW_MODE=live
+
+    echo.
+    set /p NEW_TEST=Yeni Test IP Adresi [!CURR_TEST_URL!]: 
+    set /p NEW_LIVE=Yeni Canli Site URL [!CURR_LIVE_URL!]: 
+)
+
 if "!NEW_TEST!"=="" set NEW_TEST=-
+if "!NEW_LIVE!"=="" set NEW_LIVE=-
 
 node update-app-info.js --set-env "!NEW_MODE!" "!NEW_LIVE!" "!NEW_TEST!"
 
 echo.
-echo [BASARILI] Derleme modu ve site adresleri guncellendi!
+echo [BASARILI] Yapilandirma ve baglanti adresleri guncellendi!
 echo.
 pause
 goto MENU
