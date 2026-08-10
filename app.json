@@ -33,7 +33,11 @@
     },
     "extra": {
       "appVariant": "production",
-      "githubRepo": "user07-ioemlak/Evdeiz_App2"
+      "githubRepo": "user07-ioemlak/Evdeiz_App2",
+      "buildEnv": "test",
+      "testUrl": "http://192.168.0.3/",
+      "liveUrl": "https://mysite.com/",
+      "activeUrl": "http://192.168.0.3/"
     }
   }
 }

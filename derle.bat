@@ -6,13 +6,23 @@ color 0A
 :MENU
 cls
 set REPO_NAME=
+set CURR_ENV=
+set CURR_ACTIVE_URL=
+for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
+    if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
+    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+)
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-repo') do (
     if "%%A"=="MEVCUT_REPO" set REPO_NAME=%%B
 )
 if "!REPO_NAME!"=="" set REPO_NAME=user07-ioemlak/Prototype
+if "!CURR_ENV!"=="" set CURR_ENV=test
+if "!CURR_ACTIVE_URL!"=="" set CURR_ACTIVE_URL=http://192.168.0.3/
 
 echo ======================================================
-echo         PROTOTYPE - DERLEME VE YONETIM PANELI
+echo         EVDE IZ - DERLEME VE YONETIM PANELI
+echo ======================================================
+echo  Aktif Mod: !CURR_ENV! [!CURR_ACTIVE_URL!]
 echo ======================================================
 echo.
 echo   1. GitHub'a Yukle ve Bulut Derlemesini Baslat
@@ -21,11 +31,12 @@ echo   3. Derlenen APK / IPA Dosyalarini Indir
 echo   4. GitHub Sayfasini Tarayicida Ac
 echo   5. Yerel Gelistirme Sunucusunu Baslat
 echo   6. Tek Platform Derle (Sadece Android / Sadece iOS)
-echo   7. Uygulama Bilgilerini Guncelle (Isim, Surum, Package ID, GitHub Repo)
+echo   7. Uygulama Bilgilerini Guncelle (Isim, Surum, Package ID, Repo)
+echo   8. Derleme Modunu ve Canli Site Adresini Degistir (Test / Live)
 echo   0. Cikis
 echo.
 echo ======================================================
-set /p SECIM=Yapmak istediginiz islemi secin [0-7]: 
+set /p SECIM=Yapmak istediginiz islemi secin [0-8]: 
 
 if "%SECIM%"=="1" goto GIT_PUSH
 if "%SECIM%"=="2" goto CHECK_BUILD
@@ -34,6 +45,7 @@ if "%SECIM%"=="4" goto OPEN_GITHUB
 if "%SECIM%"=="5" goto DEV_SERVER
 if "%SECIM%"=="6" goto SINGLE_BUILD
 if "%SECIM%"=="7" goto UPDATE_CONFIG
+if "%SECIM%"=="8" goto UPDATE_ENV
 if "%SECIM%"=="0" exit /b
 goto MENU
 
@@ -42,6 +54,29 @@ cls
 echo ======================================================
 echo  1. GITHUB'A YUKLE VE DERLEME BASLAT
 echo ======================================================
+echo.
+set CURR_ENV=
+set CURR_TEST_URL=
+set CURR_LIVE_URL=
+set CURR_ACTIVE_URL=
+for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
+    if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
+    if "%%A"=="MEVCUT_TEST_URL" set CURR_TEST_URL=%%B
+    if "%%A"=="MEVCUT_LIVE_URL" set CURR_LIVE_URL=%%B
+    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+)
+
+echo Aktif Derleme Modu: !CURR_ENV! [!CURR_ACTIVE_URL!]
+echo.
+echo Derleme Modu Secin:
+echo   1. Ayni Modla Devam Et (!CURR_ENV!: !CURR_ACTIVE_URL!)
+echo   2. Test Moduna Gec (Yerel IP: !CURR_TEST_URL!)
+echo   3. Canli Moda Gec (Canli Site: !CURR_LIVE_URL!)
+echo.
+set /p QUICK_ENV=Mod seciminiz [1-3, varsayilan 1]: 
+if "%QUICK_ENV%"=="2" node update-app-info.js --set-env test - -
+if "%QUICK_ENV%"=="3" node update-app-info.js --set-env live - -
+
 echo.
 if not exist ".git" (
     echo [BILGI] Git reposu ilklendiriliyor...
@@ -254,6 +289,58 @@ node update-app-info.js --set "!NEW_NAME!" "!NEW_VER!" "!NEW_BUNDLE!" "!NEW_REPO
 
 echo.
 echo [BASARILI] Uygulama ve Repository bilgileri guncellendi!
+echo.
+pause
+goto MENU
+
+:UPDATE_ENV
+cls
+echo ======================================================
+echo  8. DERLEME MODU VE CANLI SITE ADRESI DEGISTIR
+echo ======================================================
+echo.
+set CURR_ENV=
+set CURR_TEST_URL=
+set CURR_LIVE_URL=
+set CURR_ACTIVE_URL=
+
+for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
+    if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
+    if "%%A"=="MEVCUT_TEST_URL" set CURR_TEST_URL=%%B
+    if "%%A"=="MEVCUT_LIVE_URL" set CURR_LIVE_URL=%%B
+    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+)
+
+echo Mevcut Ayarlar:
+echo   Derleme Modu   : !CURR_ENV!
+echo   Aktif Adres    : !CURR_ACTIVE_URL!
+echo   Test IP Adresi : !CURR_TEST_URL!
+echo   Canli Site URL : !CURR_LIVE_URL!
+echo.
+echo Hangi modu aktif etmek istersiniz?
+echo   1. Test Modu (Yerel IP: !CURR_TEST_URL!)
+echo   2. Canli Mod (Canli Site: !CURR_LIVE_URL!)
+echo   0. Ana Menuye Don
+echo.
+set /p MOD_SEC=Seciminiz [0-2]: 
+
+if "%MOD_SEC%"=="0" goto MENU
+
+set NEW_MODE=
+if "%MOD_SEC%"=="1" set NEW_MODE=test
+if "%MOD_SEC%"=="2" set NEW_MODE=live
+
+echo.
+set /p NEW_LIVE=Canli Site URL (ENTER'a basarsaniz '!CURR_LIVE_URL!' kalir): 
+if "!NEW_LIVE!"=="" set NEW_LIVE=-
+
+set /p NEW_TEST=Test IP Adresi (ENTER'a basarsaniz '!CURR_TEST_URL!' kalir): 
+if "!NEW_TEST!"=="" set NEW_TEST=-
+
+node update-app-info.js --set-env "!NEW_MODE!" "!NEW_LIVE!" "!NEW_TEST!"
+
+echo.
+echo [BASARILI] Derleme modu ve site adresleri guncellendi!
 echo.
 pause
 goto MENU

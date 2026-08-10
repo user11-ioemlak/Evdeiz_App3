@@ -11,8 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
+import appJson from './app.json';
 
-const TARGET_URL = 'http://192.168.0.3/';
+const TARGET_URL = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';
 const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
 const CUSTOM_USER_AGENT = 'EvdeizApp/1.0 (MobileNativeContainer)';
 
