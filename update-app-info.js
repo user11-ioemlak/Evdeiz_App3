@@ -43,7 +43,7 @@ function showConfig() {
   const { appJson } = readConfig();
   const name = appJson.expo?.name || 'Bilinmiyor';
   const version = appJson.expo?.version || '1.0.0';
-  const bundleId = appJson.expo?.ios?.bundleIdentifier || appJson.expo?.android?.package || 'com.prototype.app';
+  const bundleId = appJson.expo?.ios?.bundleIdentifier || appJson.expo?.android?.package || 'com.evdeiz.app';
   const repo = getRepoName(appJson);
   const env = appJson.expo?.extra?.buildEnv || 'test';
   const activeUrl = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';

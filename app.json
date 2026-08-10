@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Evde İz",
-    "slug": "evde-i-z",
+    "name": "Evdeiz",
+    "slug": "evdeiz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,9 +9,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.evede.app",
+      "bundleIdentifier": "com.evdeiz.app",
       "infoPlist": {
-        "CFBundleDisplayName": "Evde İz",
+        "CFBundleDisplayName": "Evdeiz",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "com.evede.app",
+      "package": "com.evdeiz.app",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
