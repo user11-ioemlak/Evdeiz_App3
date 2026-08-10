@@ -73,8 +73,12 @@ if %errorlevel% neq 0 (
     goto MENU
 )
 echo.
-echo [BASARILI] Kod GitHub'a yuklendi!
-echo Android APK ve iOS IPA derlemesi otomatik baslatildi.
+echo [4/4] GitHub Actions derleme gorevi tetikleniyor...
+call gh workflow run build.yml --repo !REPO_NAME! -f platform=all >nul 2>&1
+
+echo.
+echo [BASARILI] Kod GitHub'a yuklendi ve derleme baslatildi!
+echo Android APK ve iOS IPA derlemesi otomatik olarak calisiyor.
 echo.
 echo Canli derleme sayfasi aciliyor...
 start https://github.com/!REPO_NAME!/actions
