@@ -46,7 +46,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.container}>
         {!hasError ? (
@@ -54,6 +54,7 @@ export default function App() {
             ref={webViewRef}
             source={{ uri: TARGET_URL }}
             style={styles.webView}
+            containerStyle={styles.webViewContainer}
             javaScriptEnabled={true}
             domStorageEnabled={true}
             allowsInlineMediaPlayback={true}
@@ -108,16 +109,20 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
+  },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     position: 'absolute',
@@ -125,7 +130,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -133,7 +138,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 15,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '500',
   },
   errorContainer: {
@@ -141,22 +146,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
   },
   errorCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 3,
   },
   errorIcon: {
     fontSize: 54,
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -178,7 +183,7 @@ const styles = StyleSheet.create({
   },
   errorDescription: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
