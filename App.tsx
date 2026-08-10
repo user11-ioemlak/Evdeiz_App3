@@ -13,6 +13,8 @@ import {
 import { WebView, WebViewNavigation } from 'react-native-webview';
 
 const TARGET_URL = 'http://192.168.0.3/';
+const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
+const CUSTOM_USER_AGENT = 'EvdeizApp/1.0 (MobileNativeContainer)';
 
 export default function App() {
   const webViewRef = useRef<WebView<{}>>(null);
@@ -52,7 +54,13 @@ export default function App() {
         {!hasError ? (
           <WebView<{}>
             ref={webViewRef}
-            source={{ uri: TARGET_URL }}
+            source={{
+              uri: TARGET_URL,
+              headers: {
+                'X-App-Secret-Key': APP_SECRET_TOKEN,
+              },
+            }}
+            userAgent={CUSTOM_USER_AGENT}
             style={styles.webView}
             containerStyle={styles.webViewContainer}
             javaScriptEnabled={true}
