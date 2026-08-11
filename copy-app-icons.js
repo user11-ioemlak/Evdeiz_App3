@@ -1,6 +1,28 @@
 const fs = require('fs');
 const path = require('path');
 
+function removeAndroidWebpDuplicates(resDir) {
+  if (!fs.existsSync(resDir)) return;
+  const entries = fs.readdirSync(resDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name.startsWith('mipmap-')) {
+      const dirPath = path.join(resDir, entry.name);
+      const files = fs.readdirSync(dirPath);
+      for (const f of files) {
+        if (f.endsWith('.webp') && f.startsWith('ic_launcher')) {
+          const webpPath = path.join(dirPath, f);
+          try {
+            fs.unlinkSync(webpPath);
+            console.log(`Deleted conflicting webp icon -> ${path.relative(__dirname, webpPath)}`);
+          } catch (e) {
+            console.error(`Failed to delete ${webpPath}: ${e.message}`);
+          }
+        }
+      }
+    }
+  }
+}
+
 function copyDir(src, dst) {
   if (!fs.existsSync(src)) return;
   if (!fs.existsSync(dst)) {
@@ -19,10 +41,13 @@ function copyDir(src, dst) {
   }
 }
 
-// 1. Copy Android Icons
+// 1. Copy Android Icons & clean up Expo prebuild default .webp icons
 const androidSrc = path.join(__dirname, 'assets', 'android_icons');
 const androidDst = path.join(__dirname, 'android', 'app', 'src', 'main', 'res');
 if (fs.existsSync(androidSrc)) {
+  console.log('Cleaning up duplicate Expo prebuild .webp icons...');
+  removeAndroidWebpDuplicates(androidDst);
+
   console.log('Copying Android mipmap and drawable icons...');
   copyDir(androidSrc, androidDst);
 }
