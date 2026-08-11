@@ -11,17 +11,28 @@ import {
   Platform,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
+import * as Network from 'expo-network';
 import appJson from './app.json';
 
 const TARGET_URL = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';
+const APP_NAME = appJson.expo?.name || 'Evdeiz';
+const APP_VERSION = appJson.expo?.version || '1.0.0';
 const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
-const CUSTOM_USER_AGENT = 'EvdeizApp/1.0 (MobileNativeContainer)';
+const CUSTOM_USER_AGENT = `EvdeizApp/${APP_VERSION} (${Platform.OS}; MobileNativeContainer)`;
 
 export default function App() {
   const webViewRef = useRef<WebView<{}>>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [deviceIp, setDeviceIp] = useState<string>('');
+
+  // Get local device IP address
+  useEffect(() => {
+    Network.getIpAddressAsync()
+      .then((ip) => setDeviceIp(ip || ''))
+      .catch(() => setDeviceIp(''));
+  }, []);
 
   // Handle hardware back button on Android
   useEffect(() => {
@@ -59,6 +70,9 @@ export default function App() {
               uri: TARGET_URL,
               headers: {
                 'X-App-Secret-Key': APP_SECRET_TOKEN,
+                'X-App-Version': APP_VERSION,
+                'X-App-Platform': Platform.OS,
+                'X-App-Local-IP': deviceIp,
               },
             }}
             userAgent={CUSTOM_USER_AGENT}
@@ -89,16 +103,21 @@ export default function App() {
         ) : (
           <View style={styles.errorContainer}>
             <View style={styles.errorCard}>
-              <Text style={styles.errorIcon}>🌐</Text>
-              <Text style={styles.errorTitle}>Bağlantı Kurulamadı</Text>
-              <Text style={styles.errorUrl}>{TARGET_URL}</Text>
+              <Text style={styles.errorIcon}>📡</Text>
+              <Text style={styles.errorTitle}>Bağlantı Sorunu</Text>
+              <Text style={styles.errorUrl}>{APP_NAME}</Text>
 
               <Text style={styles.errorDescription}>
-                Sunucuya erişilemiyor. Lütfen cihazınızın aynı Wi-Fi ağında olduğundan ve sunucunun aktif çalıştığından emin olun.
+                Sunucu ile bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin,
+                cihazınızın aynı Wi‑Fi ağına bağlı olduğundan ve sunucunun çalışır durumda
+                olduğundan emin olun.
               </Text>
 
-              <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.8}>
-                <Text style={styles.retryButtonText}>Tekrar Yenile</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleRetry}
+                activeOpacity={0.8}>
+                <Text style={styles.retryButtonText}>Bağlantıyı Yeniden Dene</Text>
               </TouchableOpacity>
             </View>
           </View>
