@@ -2,6 +2,7 @@
 setlocal enabledelayedexpansion
 title Prototype - Derleme ve Yonetim Paneli
 color 0A
+chcp 65001 >nul
 
 :MENU
 cls
@@ -124,15 +125,23 @@ goto MENU
 :CHECK_BUILD
 cls
 echo ======================================================
-echo  2. DERLEME DURUMU
+echo  2. DERLEME DURUMU (CANLI OTOMATIK YENILEME)
 echo ======================================================
 echo.
 echo Son derleme islemleri:
+echo ------------------------------------------------------
 echo.
 call gh run list --repo !REPO_NAME! --limit 5
 echo.
-pause
-goto MENU
+echo ------------------------------------------------------
+echo Son Yenileme: %TIME:~0,8%
+echo.
+echo   [Q] Ana Menuye Don
+echo   [Hicbir sey yapmazsaniz 5 saniye icinde otomatik yenilenir]
+echo.
+choice /c QR /t 5 /d R /m "Seciminiz [Q: Menuye Don]:" >nul
+if %errorlevel% equ 1 goto MENU
+goto CHECK_BUILD
 
 :DOWNLOAD
 cls
