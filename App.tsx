@@ -26,12 +26,23 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [deviceIp, setDeviceIp] = useState<string>('');
+  const [isNetworkConnected, setIsNetworkConnected] = useState<boolean>(true);
+
+  const checkNetworkStatus = async () => {
+    try {
+      const state = await Network.getNetworkStateAsync();
+      const connected = !!(state.isConnected && state.isInternetReachable !== false);
+      setIsNetworkConnected(connected);
+      const ip = await Network.getIpAddressAsync();
+      if (ip) setDeviceIp(ip);
+    } catch {
+      setIsNetworkConnected(true);
+    }
+  };
 
   // Get local device IP address
   useEffect(() => {
-    Network.getIpAddressAsync()
-      .then((ip) => setDeviceIp(ip || ''))
-      .catch(() => setDeviceIp(''));
+    checkNetworkStatus();
   }, []);
 
   // Handle hardware back button on Android
@@ -50,9 +61,10 @@ export default function App() {
     return () => backHandler.remove();
   }, [canGoBack]);
 
-  const handleRetry = () => {
-    setHasError(false);
+  const handleRetry = async () => {
     setIsLoading(true);
+    setHasError(false);
+    await checkNetworkStatus();
     if (webViewRef.current) {
       webViewRef.current.reload();
     }
@@ -97,27 +109,37 @@ export default function App() {
             }}
             onError={() => {
               setIsLoading(false);
-              setHasError(true);
+              checkNetworkStatus().then(() => {
+                setHasError(true);
+              });
             }}
           />
         ) : (
           <View style={styles.errorContainer}>
             <View style={styles.errorCard}>
-              <Text style={styles.errorIcon}>📡</Text>
-              <Text style={styles.errorTitle}>Bağlantı Sorunu</Text>
+              <Text style={styles.errorIcon}>
+                {!isNetworkConnected ? '🌐' : '📡'}
+              </Text>
+              <Text style={styles.errorTitle}>
+                {!isNetworkConnected ? 'Ağ Bağlantısı Yok' : 'Sunucuya Ulaşılamıyor'}
+              </Text>
               <Text style={styles.errorUrl}>{APP_NAME}</Text>
 
               <Text style={styles.errorDescription}>
-                Sunucu ile bağlantı kurulamadı. Lütfen internet bağlantınızı kontrol edin,
-                cihazınızın aynı Wi‑Fi ağına bağlı olduğundan ve sunucunun çalışır durumda
-                olduğundan emin olun.
+                {!isNetworkConnected
+                  ? 'Cihazınız bir Wi‑Fi veya mobil veri ağına bağlı görünmüyor. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.'
+                  : 'İnternet / ağ bağlantınız var ancak uygulama sunucusu ile iletişim kurulamadı. Lütfen sunucunun aktif ve aynı ağda erişilebilir olduğundan emin olun.'}
               </Text>
 
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={handleRetry}
                 activeOpacity={0.8}>
-                <Text style={styles.retryButtonText}>Bağlantıyı Yeniden Dene</Text>
+                <Text style={styles.retryButtonText}>
+                  {!isNetworkConnected
+                    ? 'Ağ Bağlantısını Kontrol Et & Yeniden Dene'
+                    : 'Sunucu Bağlantısını Yeniden Dene'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
