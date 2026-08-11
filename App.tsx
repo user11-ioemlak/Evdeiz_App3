@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  Image,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
@@ -20,6 +21,32 @@ const APP_NAME = appJson.expo?.name || 'Evdeiz';
 const APP_VERSION = appJson.expo?.version || '1.0.0';
 const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
 const CUSTOM_USER_AGENT = `EvdeizApp/${APP_VERSION} (${Platform.OS}; ${Device.modelName || 'MobileNativeContainer'})`;
+
+const DISABLE_ZOOM_SCRIPT = `
+  (function() {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+    meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(event) {
+      var now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+  })();
+  true;
+`;
 
 export default function App() {
   const webViewRef = useRef<WebView<{}>>(null);
@@ -100,7 +127,11 @@ export default function App() {
       <View style={styles.container}>
         {!isReady ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3B82F6" />
+            <Image
+              source={require('./assets/loading.gif')}
+              style={styles.loadingGif}
+              resizeMode="contain"
+            />
             <Text style={styles.loadingText}>Başlatılıyor...</Text>
           </View>
         ) : !hasError ? (
@@ -130,6 +161,11 @@ export default function App() {
             originWhitelist={['*']}
             mixedContentMode="always"
             pullToRefreshEnabled={true}
+            scalesPageToFit={false}
+            setBuiltInZoomControls={false}
+            setDisplayZoomControls={false}
+            textZoom={100}
+            injectedJavaScript={DISABLE_ZOOM_SCRIPT}
             onNavigationStateChange={(navState: WebViewNavigation) => {
               setCanGoBack(navState.canGoBack);
             }}
@@ -180,7 +216,11 @@ export default function App() {
 
         {isLoading && !hasError && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3B82F6" />
+            <Image
+              source={require('./assets/loading.gif')}
+              style={styles.loadingGif}
+              resizeMode="contain"
+            />
             <Text style={styles.loadingText}>Yükleniyor...</Text>
           </View>
         )}
@@ -219,10 +259,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 8,
     fontSize: 15,
     color: '#64748B',
     fontWeight: '500',
+  },
+  loadingGif: {
+    width: 120,
+    height: 120,
   },
   errorContainer: {
     flex: 1,

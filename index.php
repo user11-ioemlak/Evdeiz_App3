@@ -176,7 +176,7 @@ if (!$isAppRequest) {
 <html lang="tr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>403 Yetkisiz Erişim</title>
     <style>
         body {
@@ -249,7 +249,7 @@ if ($errorType !== null) {
 <html lang="tr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sürüm Kontrolü</title>
     <style>
         body {
@@ -326,7 +326,7 @@ securityLog($logDir, sprintf(
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Evdeiz Sağlık</title>
     <style>
         :root {
