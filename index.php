@@ -77,6 +77,7 @@ $appDeviceModel     = trim($_SERVER['HTTP_X_APP_DEVICE_MODEL'] ?? '');
 $appOsVersion       = trim($_SERVER['HTTP_X_APP_OS_VERSION'] ?? '');
 $appDeviceBrand     = trim($_SERVER['HTTP_X_APP_DEVICE_BRAND'] ?? '');
 $isPhysicalDevice   = trim($_SERVER['HTTP_X_APP_IS_PHYSICAL_DEVICE'] ?? '');
+$isVpnActive        = strtolower(trim($_SERVER['HTTP_X_APP_IS_VPN_ACTIVE'] ?? '')) === 'true';
 $userAgent          = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $remoteIp           = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
@@ -310,11 +311,12 @@ HTML;
 // BAŞARILI BAĞLANTI LOGU
 // ============================================
 securityLog($logDir, sprintf(
-    'OK | IP=%s | LOCAL=%s | PLATFORM=%s | VERSION=%s',
+    'OK | IP=%s | LOCAL=%s | PLATFORM=%s | VERSION=%s | VPN=%s',
     sanitizeForLog($remoteIp),
     sanitizeForLog($appLocalIp ?: 'YOK'),
     sanitizeForLog($appPlatform),
-    sanitizeForLog($appVersion)
+    sanitizeForLog($appVersion),
+    $isVpnActive ? 'EVET' : 'HAYIR'
 ));
 
 // ============================================
@@ -494,6 +496,16 @@ securityLog($logDir, sprintf(
                     <div class="info-item">
                         <span>Bağlantı (Dış) IP</span>
                         <strong><?= htmlspecialchars($remoteIp, ENT_QUOTES, 'UTF-8') ?></strong>
+                    </div>
+                    <div class="info-item">
+                        <span>VPN Bağlantı Durumu</span>
+                        <strong>
+                            <?php if ($isVpnActive): ?>
+                                <span style="color:#dc2626; font-weight:700;">🔒 VPN Aktif</span>
+                            <?php else: ?>
+                                <span style="color:#15803d;">✅ Doğrudan Bağlantı (VPN Yok)</span>
+                            <?php endif; ?>
+                        </strong>
                     </div>
                 </div>
             </div>

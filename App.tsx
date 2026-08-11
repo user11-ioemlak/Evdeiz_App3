@@ -65,6 +65,7 @@ export default function App() {
     osVersion: Device.osVersion || String(Platform.Version),
     brand: Device.brand || '',
     isPhysicalDevice: true,
+    isVpnActive: false,
   });
 
   const loadDeviceInfo = async () => {
@@ -74,6 +75,8 @@ export default function App() {
         Network.getNetworkStateAsync().catch(() => null),
       ]);
 
+      const isVpn = netState ? (netState.type === Network.NetworkStateType.VPN || String(netState.type).toUpperCase() === 'VPN') : false;
+
       setDeviceInfo({
         ip: ip || '',
         deviceName: Device.deviceName || Platform.OS,
@@ -81,6 +84,7 @@ export default function App() {
         osVersion: Device.osVersion || String(Platform.Version),
         brand: Device.brand || Platform.OS,
         isPhysicalDevice: Device.isDevice,
+        isVpnActive: isVpn,
       });
 
       if (netState) {
@@ -151,6 +155,7 @@ export default function App() {
                 'X-App-OS-Version': deviceInfo.osVersion,
                 'X-App-Device-Brand': deviceInfo.brand,
                 'X-App-Is-Physical-Device': deviceInfo.isPhysicalDevice ? 'true' : 'false',
+                'X-App-Is-Vpn-Active': deviceInfo.isVpnActive ? 'true' : 'false',
               },
             }}
             userAgent={CUSTOM_USER_AGENT}
