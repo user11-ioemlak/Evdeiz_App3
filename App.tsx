@@ -77,13 +77,39 @@ export default function App() {
 
       const isVpn = netState ? (netState.type === Network.NetworkStateType.VPN || String(netState.type).toUpperCase() === 'VPN') : false;
 
+      // --- Advanced emulator detection ---
+      let isPhysical = Device.isDevice;
+
+      if (isPhysical && Platform.OS === 'android') {
+        const dn = (Device.deviceName || '').toLowerCase();
+        const mn = (Device.modelName || '').toLowerCase();
+        const br = (Device.brand || '').toLowerCase();
+        const combined = `${dn} ${mn} ${br}`;
+
+        // Known emulator fingerprints in device metadata
+        const emulatorKeywords = [
+          'bluestacks', 'bstk', 'nox', 'memu', 'genymotion',
+          'emulator', 'sdk_gphone', 'android sdk', 'goldfish',
+          'ranchu', 'vbox', 'virtual', 'droid4x', 'ldplayer',
+          'andy', 'windroye', 'phoenix', 'microvirt',
+        ];
+        if (emulatorKeywords.some(kw => combined.includes(kw))) {
+          isPhysical = false;
+        }
+
+        // Standard Android emulator IP ranges (10.0.2.x, 10.0.3.x)
+        if (isPhysical && ip && (ip.startsWith('10.0.2.') || ip.startsWith('10.0.3.'))) {
+          isPhysical = false;
+        }
+      }
+
       setDeviceInfo({
         ip: ip || '',
         deviceName: Device.deviceName || Platform.OS,
         modelName: Device.modelName || Platform.OS,
         osVersion: Device.osVersion || String(Platform.Version),
         brand: Device.brand || Platform.OS,
-        isPhysicalDevice: Device.isDevice,
+        isPhysicalDevice: isPhysical,
         isVpnActive: isVpn,
       });
 
