@@ -14,7 +14,7 @@ import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
 import appJson from './app.json';
 
-const TARGET_URL = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';
+const TARGET_URL = appJson.expo?.extra?.activeUrl || appJson.expo?.extra?.liveUrl || appJson.expo?.extra?.testUrl;
 const APP_NAME = appJson.expo?.name || 'Evdeiz';
 const APP_VERSION = appJson.expo?.version || '1.0.0';
 const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
