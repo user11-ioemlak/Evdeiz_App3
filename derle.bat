@@ -2,13 +2,13 @@
 setlocal enabledelayedexpansion
 title Prototype - Derleme ve Yonetim Paneli
 color 0A
-chcp 65001 >nul
 
 :MENU
 cls
 set REPO_NAME=
 set CURR_ENV=
 set CURR_ACTIVE_URL=
+set GH_USER=
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
     if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
     if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
@@ -16,14 +16,18 @@ for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-repo') do (
     if "%%A"=="MEVCUT_REPO" set REPO_NAME=%%B
 )
+for /f "tokens=*" %%U in ('call gh api user --jq .login 2^>nul') do set GH_USER=%%U
+
 if "!REPO_NAME!"=="" set REPO_NAME=user07-ioemlak/Prototype
 if "!CURR_ENV!"=="" set CURR_ENV=test
 if "!CURR_ACTIVE_URL!"=="" set CURR_ACTIVE_URL=http://192.168.0.3/
+if "!GH_USER!"=="" set GH_USER=Oturum Acilmadi
 
 echo ======================================================
 echo         EVDE IZ - DERLEME VE YONETIM PANELI
 echo ======================================================
-echo  Aktif Mod: !CURR_ENV! [!CURR_ACTIVE_URL!]
+echo  Aktif Mod    : !CURR_ENV! [!CURR_ACTIVE_URL!]
+echo  GitHub Hesabi: !GH_USER!
 echo ======================================================
 echo.
 echo   1. GitHub'a Yukle ve Bulut Derlemesini Baslat
@@ -34,10 +38,11 @@ echo   5. Yerel Gelistirme Sunucusunu Baslat
 echo   6. Tek Platform Derle (Sadece Android / Sadece iOS)
 echo   7. Uygulama Bilgilerini Guncelle (Isim, Surum, Package ID, Repo)
 echo   8. Derleme Modunu ve Canli Site Adresini Degistir (Test / Live)
+echo   9. GitHub Hesabini Degistir / Bagla (Oturum Ac / Kapat / Durum)
 echo   0. Cikis
 echo.
 echo ======================================================
-set /p SECIM=Yapmak istediginiz islemi secin [0-8]: 
+set /p SECIM=Yapmak istediginiz islemi secin [0-9]: 
 
 if "%SECIM%"=="1" goto GIT_PUSH
 if "%SECIM%"=="2" goto CHECK_BUILD
@@ -47,6 +52,7 @@ if "%SECIM%"=="5" goto DEV_SERVER
 if "%SECIM%"=="6" goto SINGLE_BUILD
 if "%SECIM%"=="7" goto UPDATE_CONFIG
 if "%SECIM%"=="8" goto UPDATE_ENV
+if "%SECIM%"=="9" goto GITHUB_AUTH
 if "%SECIM%"=="0" exit /b
 goto MENU
 
@@ -268,33 +274,38 @@ set CURR_NAME=
 set CURR_VER=
 set CURR_BUNDLE=
 set CURR_REPO=
+set CURR_REPO_SLUG=
 
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get') do (
     if "%%A"=="MEVCUT_NAME" set CURR_NAME=%%B
     if "%%A"=="MEVCUT_VERSION" set CURR_VER=%%B
     if "%%A"=="MEVCUT_BUNDLE_ID" set CURR_BUNDLE=%%B
     if "%%A"=="MEVCUT_REPO" set CURR_REPO=%%B
+    if "%%A"=="MEVCUT_REPO_SLUG" set CURR_REPO_SLUG=%%B
 )
+
+if "!CURR_REPO_SLUG!"=="" set CURR_REPO_SLUG=Evdeiz_App2
 
 echo Mevcut Bilgiler:
 echo   Uygulama Adi     : !CURR_NAME!
 echo   Surum            : !CURR_VER!
 echo   Package/Bundle ID: !CURR_BUNDLE!
-echo   GitHub Repository: !CURR_REPO!
+echo   Bagli GitHub User: !GH_USER!
+echo   Repository Adi   : !CURR_REPO_SLUG!  (Tam Ad: !GH_USER!/!CURR_REPO_SLUG!)
 echo.
 echo (Degistirmek istemediginiz alanlarda ENTER'a basarak gecin)
 echo.
 set /p NEW_NAME=Yeni Uygulama Adi [!CURR_NAME!]: 
 set /p NEW_VER=Yeni Surum [!CURR_VER!]: 
 set /p NEW_BUNDLE=Yeni Package/Bundle ID [!CURR_BUNDLE!]: 
-set /p NEW_REPO=Yeni GitHub Repository [!CURR_REPO!]: 
+set /p NEW_REPO_SLUG=Yeni Repository Adi (!GH_USER!/...) [!CURR_REPO_SLUG!]: 
 
 if "!NEW_NAME!"=="" set NEW_NAME=-
 if "!NEW_VER!"=="" set NEW_VER=-
 if "!NEW_BUNDLE!"=="" set NEW_BUNDLE=-
-if "!NEW_REPO!"=="" set NEW_REPO=-
+if "!NEW_REPO_SLUG!"=="" set NEW_REPO_SLUG=-
 
-node update-app-info.js --set "!NEW_NAME!" "!NEW_VER!" "!NEW_BUNDLE!" "!NEW_REPO!"
+node update-app-info.js --set "!NEW_NAME!" "!NEW_VER!" "!NEW_BUNDLE!" "!NEW_REPO_SLUG!"
 
 echo.
 echo [BASARILI] Uygulama ve Repository bilgileri guncellendi!
@@ -386,6 +397,53 @@ echo.
 echo [BASARILI] Yapilandirma ve baglanti adresleri guncellendi!
 echo.
 pause
+goto MENU
+
+:GITHUB_AUTH
+cls
+echo ======================================================
+echo  9. GITHUB HESABINI DEGISTIR VE BAGLA
+echo ======================================================
+echo.
+echo Mevcut GitHub Oturum Durumu:
+echo ------------------------------------------------------
+call gh auth status
+echo ------------------------------------------------------
+echo.
+echo   1. Yeni GitHub Hesabi ile Oturum Ac / Degistir (CLI)
+echo   2. Web Tarayicisi Uzerinden GitHub Hesabi Bagla
+echo   3. Mevcut GitHub Oturumunu Kapat (gh auth logout)
+echo   0. Ana Menuye Don
+echo.
+echo ======================================================
+set /p GH_OPT=Seciminiz [0-3]: 
+
+if "%GH_OPT%"=="0" goto MENU
+
+if "%GH_OPT%"=="1" (
+    echo.
+    echo GitHub CLI Oturum Acma / Degistirme Baslatiliyor...
+    call gh auth login
+    pause
+    goto MENU
+)
+
+if "%GH_OPT%"=="2" (
+    echo.
+    echo Tarayici ile GitHub Girisi Baslatiliyor...
+    call gh auth login --web
+    pause
+    goto MENU
+)
+
+if "%GH_OPT%"=="3" (
+    echo.
+    echo GitHub Oturumu Kapatiliyor...
+    call gh auth logout
+    pause
+    goto MENU
+)
+
 goto MENU
 
 

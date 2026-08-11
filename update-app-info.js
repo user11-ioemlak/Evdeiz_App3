@@ -22,8 +22,39 @@ function cleanRepoInput(rawRepo) {
   return repo;
 }
 
+function getCurrentGithubUser() {
+  try {
+    const username = execSync('gh api user --jq .login', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    if (username) return username;
+  } catch (e) {}
+  return null;
+}
+
 function getRepoName(appJson) {
+  const currentGhUser = getCurrentGithubUser();
   let repo = appJson.expo?.extra?.githubRepo || '';
+
+  if (repo && repo.includes('/')) {
+    const parts = repo.split('/');
+    const repoSlug = parts[1];
+    if (currentGhUser && parts[0] !== currentGhUser) {
+      repo = `${currentGhUser}/${repoSlug}`;
+      if (!appJson.expo.extra) appJson.expo.extra = {};
+      appJson.expo.extra.githubRepo = repo;
+      try {
+        fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+      } catch (e) {}
+      try {
+        const repoUrl = `https://github.com/${repo}.git`;
+        try {
+          execSync(`git remote set-url origin ${repoUrl}`, { stdio: 'ignore' });
+        } catch (e) {
+          execSync(`git remote add origin ${repoUrl}`, { stdio: 'ignore' });
+        }
+      } catch (e2) {}
+    }
+  }
+
   if (!repo) {
     try {
       const gitRemote = execSync('git remote get-url origin', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
@@ -33,9 +64,12 @@ function getRepoName(appJson) {
       }
     } catch (e) {}
   }
+
   if (!repo) {
-    repo = 'user07-ioemlak/Prototype';
+    const user = currentGhUser || 'user07-ioemlak';
+    repo = `${user}/Evdeiz_App2`;
   }
+
   return cleanRepoInput(repo);
 }
 
@@ -45,6 +79,7 @@ function showConfig() {
   const version = appJson.expo?.version || '1.0.0';
   const bundleId = appJson.expo?.ios?.bundleIdentifier || appJson.expo?.android?.package || 'com.evdeiz.app';
   const repo = getRepoName(appJson);
+  const repoSlug = repo.includes('/') ? repo.split('/')[1] : repo;
   const env = appJson.expo?.extra?.buildEnv || 'test';
   const activeUrl = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';
 
@@ -52,6 +87,7 @@ function showConfig() {
   console.log(`MEVCUT_VERSION=${version}`);
   console.log(`MEVCUT_BUNDLE_ID=${bundleId}`);
   console.log(`MEVCUT_REPO=${repo}`);
+  console.log(`MEVCUT_REPO_SLUG=${repoSlug}`);
   console.log(`MEVCUT_ENV=${env}`);
   console.log(`MEVCUT_ACTIVE_URL=${activeUrl}`);
 }
@@ -140,26 +176,32 @@ function updateConfig(newName, newVersion, newBundleId, rawRepo) {
     appJson.expo.android.package = newBundleId;
   }
 
-  const cleanRepo = cleanRepoInput(rawRepo);
-  if (cleanRepo) {
+  if (rawRepo && rawRepo !== '-') {
+    let repoSlug = cleanRepoInput(rawRepo);
+    if (repoSlug.includes('/')) {
+      repoSlug = repoSlug.split('/')[1];
+    }
+    const currentGhUser = getCurrentGithubUser() || 'user13ioemlak';
+    const fullRepo = `${currentGhUser}/${repoSlug}`;
+
     if (!appJson.expo.extra) appJson.expo.extra = {};
-    appJson.expo.extra.githubRepo = cleanRepo;
+    appJson.expo.extra.githubRepo = fullRepo;
 
     // Check if repo exists on GitHub, create if not
     try {
-      execSync(`gh repo view ${cleanRepo}`, { stdio: 'ignore' });
+      execSync(`gh repo view ${fullRepo}`, { stdio: 'ignore' });
     } catch (err) {
-      console.log(`\n[BILGI] GitHub'da '${cleanRepo}' reposu bulunamadi. Yeni private repo olusturuluyor...`);
+      console.log(`\n[BILGI] GitHub'da '${fullRepo}' reposu bulunamadi. Yeni private repo olusturuluyor...`);
       try {
-        execSync(`gh repo create ${cleanRepo} --private`, { stdio: 'inherit' });
-        console.log(`[BASARILI] GitHub reposu '${cleanRepo}' basariyla olusturuldu!`);
+        execSync(`gh repo create ${fullRepo} --private`, { stdio: 'inherit' });
+        console.log(`[BASARILI] GitHub reposu '${fullRepo}' basariyla olusturuldu!`);
       } catch (createErr) {
         console.log(`[UYARI] Repository otomatik olusturulamadi: ${createErr.message}`);
       }
     }
 
     try {
-      const repoUrl = `https://github.com/${cleanRepo}.git`;
+      const repoUrl = `https://github.com/${fullRepo}.git`;
       try {
         execSync(`git remote set-url origin ${repoUrl}`, { stdio: 'ignore' });
       } catch (e) {
