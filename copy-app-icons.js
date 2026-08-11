@@ -1,21 +1,39 @@
 const fs = require('fs');
 const path = require('path');
 
-function removeAndroidWebpDuplicates(resDir) {
+function removeExpoDefaultIcons(resDir) {
   if (!fs.existsSync(resDir)) return;
+
+  // 1. Delete mipmap-anydpi-v26 entirely (adaptive icon XMLs that reference
+  //    foreground/background/monochrome layers we don't ship)
+  const anydpiDir = path.join(resDir, 'mipmap-anydpi-v26');
+  if (fs.existsSync(anydpiDir)) {
+    fs.rmSync(anydpiDir, { recursive: true, force: true });
+    console.log(`Deleted adaptive icon dir -> ${path.relative(__dirname, anydpiDir)}`);
+  }
+
+  // 2. Walk every mipmap-* directory and remove Expo's default files that
+  //    would conflict with our custom PNGs
+  const conflictPatterns = [
+    /^ic_launcher.*\.webp$/,            // default webp launcher icons
+    /^ic_launcher_foreground\.\w+$/,    // adaptive foreground layer
+    /^ic_launcher_background\.\w+$/,    // adaptive background layer
+    /^ic_launcher_monochrome\.\w+$/,    // adaptive monochrome layer
+  ];
+
   const entries = fs.readdirSync(resDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isDirectory() && entry.name.startsWith('mipmap-')) {
       const dirPath = path.join(resDir, entry.name);
       const files = fs.readdirSync(dirPath);
       for (const f of files) {
-        if (f.endsWith('.webp') && f.startsWith('ic_launcher')) {
-          const webpPath = path.join(dirPath, f);
+        if (conflictPatterns.some(rx => rx.test(f))) {
+          const filePath = path.join(dirPath, f);
           try {
-            fs.unlinkSync(webpPath);
-            console.log(`Deleted conflicting webp icon -> ${path.relative(__dirname, webpPath)}`);
+            fs.unlinkSync(filePath);
+            console.log(`Deleted conflicting icon -> ${path.relative(__dirname, filePath)}`);
           } catch (e) {
-            console.error(`Failed to delete ${webpPath}: ${e.message}`);
+            console.error(`Failed to delete ${filePath}: ${e.message}`);
           }
         }
       }
@@ -45,8 +63,8 @@ function copyDir(src, dst) {
 const androidSrc = path.join(__dirname, 'assets', 'android_icons');
 const androidDst = path.join(__dirname, 'android', 'app', 'src', 'main', 'res');
 if (fs.existsSync(androidSrc)) {
-  console.log('Cleaning up duplicate Expo prebuild .webp icons...');
-  removeAndroidWebpDuplicates(androidDst);
+  console.log('Cleaning up Expo prebuild default icons...');
+  removeExpoDefaultIcons(androidDst);
 
   console.log('Copying Android mipmap and drawable icons...');
   copyDir(androidSrc, androidDst);
