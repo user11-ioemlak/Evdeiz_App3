@@ -14,6 +14,7 @@ import {
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
+import { detectEmulator } from './utils/emulatorDetection';
 import appJson from './app.json';
 
 const TARGET_URL = appJson.expo?.extra?.buildUrl || '';
@@ -66,6 +67,8 @@ export default function App() {
     brand: Device.brand || '',
     isPhysicalDevice: true,
     isVpnActive: false,
+    suspicionScore: 0,
+    reasons: [] as string[],
   });
 
   const loadDeviceInfo = async () => {
@@ -76,32 +79,7 @@ export default function App() {
       ]);
 
       const isVpn = netState ? (netState.type === Network.NetworkStateType.VPN || String(netState.type).toUpperCase() === 'VPN') : false;
-
-      // --- Advanced emulator detection ---
-      let isPhysical = Device.isDevice;
-
-      if (isPhysical && Platform.OS === 'android') {
-        const dn = (Device.deviceName || '').toLowerCase();
-        const mn = (Device.modelName || '').toLowerCase();
-        const br = (Device.brand || '').toLowerCase();
-        const combined = `${dn} ${mn} ${br}`;
-
-        // Known emulator fingerprints in device metadata
-        const emulatorKeywords = [
-          'bluestacks', 'bstk', 'nox', 'memu', 'genymotion',
-          'emulator', 'sdk_gphone', 'android sdk', 'goldfish',
-          'ranchu', 'vbox', 'virtual', 'droid4x', 'ldplayer',
-          'andy', 'windroye', 'phoenix', 'microvirt',
-        ];
-        if (emulatorKeywords.some(kw => combined.includes(kw))) {
-          isPhysical = false;
-        }
-
-        // Standard Android emulator IP ranges (10.0.2.x, 10.0.3.x)
-        if (isPhysical && ip && (ip.startsWith('10.0.2.') || ip.startsWith('10.0.3.'))) {
-          isPhysical = false;
-        }
-      }
+      const detection = detectEmulator(ip || '');
 
       setDeviceInfo({
         ip: ip || '',
@@ -109,8 +87,10 @@ export default function App() {
         modelName: Device.modelName || Platform.OS,
         osVersion: Device.osVersion || String(Platform.Version),
         brand: Device.brand || Platform.OS,
-        isPhysicalDevice: isPhysical,
+        isPhysicalDevice: detection.isPhysical,
         isVpnActive: isVpn,
+        suspicionScore: detection.suspicionScore,
+        reasons: detection.reasons,
       });
 
       if (netState) {
@@ -182,6 +162,8 @@ export default function App() {
                 'X-App-Device-Brand': deviceInfo.brand,
                 'X-App-Is-Physical-Device': deviceInfo.isPhysicalDevice ? 'true' : 'false',
                 'X-App-Is-Vpn-Active': deviceInfo.isVpnActive ? 'true' : 'false',
+                'X-App-Suspicion-Score': String(deviceInfo.suspicionScore),
+                'X-App-Detection-Reasons': deviceInfo.reasons.join(','),
               },
             }}
             userAgent={CUSTOM_USER_AGENT}

@@ -78,6 +78,8 @@ $appOsVersion       = trim($_SERVER['HTTP_X_APP_OS_VERSION'] ?? '');
 $appDeviceBrand     = trim($_SERVER['HTTP_X_APP_DEVICE_BRAND'] ?? '');
 $isPhysicalDevice   = trim($_SERVER['HTTP_X_APP_IS_PHYSICAL_DEVICE'] ?? '');
 $isVpnActive        = strtolower(trim($_SERVER['HTTP_X_APP_IS_VPN_ACTIVE'] ?? '')) === 'true';
+$suspicionScore     = isset($_SERVER['HTTP_X_APP_SUSPICION_SCORE']) ? (int)$_SERVER['HTTP_X_APP_SUSPICION_SCORE'] : null;
+$detectionReasons   = trim($_SERVER['HTTP_X_APP_DETECTION_REASONS'] ?? '');
 $userAgent          = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $remoteIp           = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
@@ -311,12 +313,14 @@ HTML;
 // BAŞARILI BAĞLANTI LOGU
 // ============================================
 securityLog($logDir, sprintf(
-    'OK | IP=%s | LOCAL=%s | PLATFORM=%s | VERSION=%s | VPN=%s',
+    'OK | IP=%s | LOCAL=%s | PLATFORM=%s | VERSION=%s | VPN=%s | SUSPICION=%s | REASONS=%s',
     sanitizeForLog($remoteIp),
     sanitizeForLog($appLocalIp ?: 'YOK'),
     sanitizeForLog($appPlatform),
     sanitizeForLog($appVersion),
-    $isVpnActive ? 'EVET' : 'HAYIR'
+    $isVpnActive ? 'EVET' : 'HAYIR',
+    $suspicionScore !== null ? (string)$suspicionScore : 'N/A',
+    sanitizeForLog($detectionReasons ?: 'NONE')
 ));
 
 // ============================================
@@ -507,6 +511,30 @@ securityLog($logDir, sprintf(
                             <?php endif; ?>
                         </strong>
                     </div>
+                    <?php if ($suspicionScore !== null): ?>
+                    <div class="info-item">
+                        <span>Şüphe Skoru (Emülatör)</span>
+                        <strong>
+                            <?php if ($suspicionScore >= 50): ?>
+                                <span style="color:#b91c1c; font-weight:700;"><?= $suspicionScore ?> / 100 (Yüksek Şüphe)</span>
+                            <?php elseif ($suspicionScore >= 20): ?>
+                                <span style="color:#d97706; font-weight:700;"><?= $suspicionScore ?> / 100 (Orta Şüphe)</span>
+                            <?php else: ?>
+                                <span style="color:#15803d; font-weight:700;"><?= $suspicionScore ?> / 100 (Düşük/Temiz)</span>
+                            <?php endif; ?>
+                        </strong>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($detectionReasons)): ?>
+                    <div class="info-item">
+                        <span>Tespit Sinyalleri</span>
+                        <strong>
+                            <span style="color:#4b5563; font-size:0.8rem; background:#e2e8f0; padding:2px 8px; border-radius:6px; display:inline-block;">
+                                <?= htmlspecialchars(str_replace(',', ', ', $detectionReasons), ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                        </strong>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
