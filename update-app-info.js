@@ -80,8 +80,8 @@ function showConfig() {
   const bundleId = appJson.expo?.ios?.bundleIdentifier || appJson.expo?.android?.package || 'com.evdeiz.app';
   const repo = getRepoName(appJson);
   const repoSlug = repo.includes('/') ? repo.split('/')[1] : repo;
-  const env = appJson.expo?.extra?.buildEnv || 'test';
-  const activeUrl = appJson.expo?.extra?.activeUrl || 'http://192.168.0.3/';
+  const env = appJson.expo?.extra?.buildEnv || 'live';
+  const buildUrl = appJson.expo?.extra?.buildUrl || '';
 
   console.log(`MEVCUT_NAME=${name}`);
   console.log(`MEVCUT_VERSION=${version}`);
@@ -89,7 +89,7 @@ function showConfig() {
   console.log(`MEVCUT_REPO=${repo}`);
   console.log(`MEVCUT_REPO_SLUG=${repoSlug}`);
   console.log(`MEVCUT_ENV=${env}`);
-  console.log(`MEVCUT_ACTIVE_URL=${activeUrl}`);
+  console.log(`MEVCUT_BUILD_URL=${buildUrl}`);
 }
 
 function showRepo() {
@@ -100,18 +100,14 @@ function showRepo() {
 
 function showEnv() {
   const { appJson } = readConfig();
-  const env = appJson.expo?.extra?.buildEnv || 'test';
-  const testUrl = appJson.expo?.extra?.testUrl || 'http://192.168.0.3/';
-  const liveUrl = appJson.expo?.extra?.liveUrl || 'https://evdeiz.com/';
-  const activeUrl = appJson.expo?.extra?.activeUrl || (env === 'live' ? liveUrl : testUrl);
+  const env = appJson.expo?.extra?.buildEnv || 'live';
+  const buildUrl = appJson.expo?.extra?.buildUrl || '';
 
   console.log(`MEVCUT_ENV=${env}`);
-  console.log(`MEVCUT_TEST_URL=${testUrl}`);
-  console.log(`MEVCUT_LIVE_URL=${liveUrl}`);
-  console.log(`MEVCUT_ACTIVE_URL=${activeUrl}`);
+  console.log(`MEVCUT_BUILD_URL=${buildUrl}`);
 }
 
-function updateEnv(mode, newLiveUrl, newTestUrl) {
+function updateEnv(mode, newBuildUrl) {
   const { appJson, packageJson } = readConfig();
   if (!appJson.expo.extra) appJson.expo.extra = {};
 
@@ -119,29 +115,19 @@ function updateEnv(mode, newLiveUrl, newTestUrl) {
     appJson.expo.extra.buildEnv = mode;
   }
 
-  if (newTestUrl && newTestUrl !== '-') {
-    let url = newTestUrl.trim();
+  if (newBuildUrl && newBuildUrl !== '-') {
+    let url = newBuildUrl.trim();
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'http://' + url;
+      url = (appJson.expo.extra.buildEnv === 'live' ? 'https://' : 'http://') + url;
     }
     if (!url.endsWith('/')) url += '/';
-    appJson.expo.extra.testUrl = url;
+    appJson.expo.extra.buildUrl = url;
   }
 
-  if (newLiveUrl && newLiveUrl !== '-') {
-    let url = newLiveUrl.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    if (!url.endsWith('/')) url += '/';
-    appJson.expo.extra.liveUrl = url;
-  }
-
-  const currentMode = appJson.expo.extra.buildEnv || 'test';
-  const currentTest = appJson.expo.extra.testUrl || 'http://192.168.0.3/';
-  const currentLive = appJson.expo.extra.liveUrl || 'https://evdeiz.com/';
-
-  appJson.expo.extra.activeUrl = currentMode === 'live' ? currentLive : currentTest;
+  // Clean up legacy URL keys if present
+  delete appJson.expo.extra.activeUrl;
+  delete appJson.expo.extra.testUrl;
+  delete appJson.expo.extra.liveUrl;
 
   fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
@@ -216,6 +202,43 @@ function updateConfig(newName, newVersion, newBundleId, rawRepo) {
   console.log('BASARILI');
 }
 
+function showCustomConfig() {
+  const { appJson } = readConfig();
+  const secretToken = appJson.expo?.extra?.appSecretToken || 'Evdeiz_Secure_App_Key_2026_x87f';
+  const uaPrefix = appJson.expo?.extra?.customUserAgentPrefix || 'EvdeizApp';
+  const disableZoom = appJson.expo?.extra?.disableZoom !== false ? 'true' : 'false';
+  const orientation = appJson.expo?.orientation || 'portrait';
+
+  console.log(`MEVCUT_SECRET_TOKEN=${secretToken}`);
+  console.log(`MEVCUT_UA_PREFIX=${uaPrefix}`);
+  console.log(`MEVCUT_DISABLE_ZOOM=${disableZoom}`);
+  console.log(`MEVCUT_ORIENTATION=${orientation}`);
+}
+
+function updateCustomConfig(newToken, newUaPrefix, newZoomState, newOrientation) {
+  const { appJson } = readConfig();
+  if (!appJson.expo.extra) appJson.expo.extra = {};
+
+  if (newToken && newToken !== '-') {
+    appJson.expo.extra.appSecretToken = newToken.trim();
+  }
+
+  if (newUaPrefix && newUaPrefix !== '-') {
+    appJson.expo.extra.customUserAgentPrefix = newUaPrefix.trim();
+  }
+
+  if (newZoomState && newZoomState !== '-') {
+    appJson.expo.extra.disableZoom = newZoomState.toLowerCase() === 'true';
+  }
+
+  if (newOrientation && newOrientation !== '-') {
+    appJson.expo.orientation = newOrientation.trim();
+  }
+
+  fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n', 'utf8');
+  console.log('BASARILI');
+}
+
 const args = process.argv.slice(2);
 
 if (args[0] === '--get') {
@@ -224,6 +247,14 @@ if (args[0] === '--get') {
   showRepo();
 } else if (args[0] === '--get-env') {
   showEnv();
+} else if (args[0] === '--get-custom') {
+  showCustomConfig();
+} else if (args[0] === '--set-custom') {
+  const newToken = args[1] && args[1] !== '-' ? args[1] : null;
+  const newUaPrefix = args[2] && args[2] !== '-' ? args[2] : null;
+  const newZoomState = args[3] && args[3] !== '-' ? args[3] : null;
+  const newOrientation = args[4] && args[4] !== '-' ? args[4] : null;
+  updateCustomConfig(newToken, newUaPrefix, newZoomState, newOrientation);
 } else if (args[0] === '--set-env') {
   const mode = args[1] && args[1] !== '-' ? args[1] : null;
   const newLiveUrl = args[2] && args[2] !== '-' ? args[2] : null;

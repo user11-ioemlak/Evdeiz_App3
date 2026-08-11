@@ -7,11 +7,12 @@ color 0A
 cls
 set REPO_NAME=
 set CURR_ENV=
-set CURR_ACTIVE_URL=
+set CURR_BUILD_URL=
 set GH_USER=
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
     if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
-    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+    if "%%A"=="MEVCUT_BUILD_URL" set CURR_BUILD_URL=%%B
+    if "%%A"=="MEVCUT_ACTIVE_URL" if "!CURR_BUILD_URL!"=="" set CURR_BUILD_URL=%%B
 )
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-repo') do (
     if "%%A"=="MEVCUT_REPO" set REPO_NAME=%%B
@@ -19,14 +20,14 @@ for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-repo') do (
 for /f "tokens=*" %%U in ('call gh api user --jq .login 2^>nul') do set GH_USER=%%U
 
 if "!REPO_NAME!"=="" set REPO_NAME=user07-ioemlak/Prototype
-if "!CURR_ENV!"=="" set CURR_ENV=test
-if "!CURR_ACTIVE_URL!"=="" set CURR_ACTIVE_URL=http://192.168.0.3/
+if "!CURR_ENV!"=="" set CURR_ENV=live
+if "!CURR_BUILD_URL!"=="" set CURR_BUILD_URL=https://ioemlak.com/
 if "!GH_USER!"=="" set GH_USER=Oturum Acilmadi
 
 echo ======================================================
 echo         EVDE IZ - DERLEME VE YONETIM PANELI
 echo ======================================================
-echo  Aktif Mod    : !CURR_ENV! [!CURR_ACTIVE_URL!]
+echo  Aktif Mod    : !CURR_ENV! [!CURR_BUILD_URL!]
 echo  GitHub Hesabi: !GH_USER!
 echo ======================================================
 echo.
@@ -39,10 +40,11 @@ echo   6. Tek Platform Derle (Sadece Android / Sadece iOS)
 echo   7. Uygulama Bilgilerini Guncelle (Isim, Surum, Package ID, Repo)
 echo   8. Derleme Modunu ve Canli Site Adresini Degistir (Test / Live)
 echo   9. GitHub Hesabini Degistir / Bagla (Oturum Ac / Kapat / Durum)
+echo  10. Ozellestirmeler ve Gelismis Ayarlar (Secret Token, User-Agent, Zoom, Oryantasyon)
 echo   0. Cikis
 echo.
 echo ======================================================
-set /p SECIM=Yapmak istediginiz islemi secin [0-9]: 
+set /p SECIM=Yapmak istediginiz islemi secin [0-10]: 
 
 if "%SECIM%"=="1" goto GIT_PUSH
 if "%SECIM%"=="2" goto CHECK_BUILD
@@ -53,6 +55,7 @@ if "%SECIM%"=="6" goto SINGLE_BUILD
 if "%SECIM%"=="7" goto UPDATE_CONFIG
 if "%SECIM%"=="8" goto UPDATE_ENV
 if "%SECIM%"=="9" goto GITHUB_AUTH
+if "%SECIM%"=="10" goto CUSTOM_SETTINGS
 if "%SECIM%"=="0" exit /b
 goto MENU
 
@@ -63,26 +66,22 @@ echo  1. GITHUB'A YUKLE VE DERLEME BASLAT
 echo ======================================================
 echo.
 set CURR_ENV=
-set CURR_TEST_URL=
-set CURR_LIVE_URL=
-set CURR_ACTIVE_URL=
+set CURR_BUILD_URL=
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
     if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
-    if "%%A"=="MEVCUT_TEST_URL" set CURR_TEST_URL=%%B
-    if "%%A"=="MEVCUT_LIVE_URL" set CURR_LIVE_URL=%%B
-    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+    if "%%A"=="MEVCUT_BUILD_URL" set CURR_BUILD_URL=%%B
 )
 
-echo Aktif Derleme Modu: !CURR_ENV! [!CURR_ACTIVE_URL!]
+echo Aktif Derleme Modu: !CURR_ENV! [!CURR_BUILD_URL!]
 echo.
 echo Derleme Modu Secin:
-echo   1. Ayni Modla Devam Et (!CURR_ENV!: !CURR_ACTIVE_URL!)
-echo   2. Test Moduna Gec (Yerel IP: !CURR_TEST_URL!)
-echo   3. Canli Moda Gec (Canli Site: !CURR_LIVE_URL!)
+echo   1. Ayni Modla Devam Et (!CURR_ENV!: !CURR_BUILD_URL!)
+echo   2. Test Moduna Gec (test)
+echo   3. Canli Moda Gec (live)
 echo.
 set /p QUICK_ENV=Mod seciminiz [1-3, varsayilan 1]: 
-if "%QUICK_ENV%"=="2" node update-app-info.js --set-env test - -
-if "%QUICK_ENV%"=="3" node update-app-info.js --set-env live - -
+if "%QUICK_ENV%"=="2" node update-app-info.js --set-env test -
+if "%QUICK_ENV%"=="3" node update-app-info.js --set-env live -
 
 echo.
 if not exist ".git" (
@@ -316,85 +315,70 @@ goto MENU
 :UPDATE_ENV
 cls
 echo ======================================================
-echo  8. DERLEME MODU VE BAGLANTI ADRESLERINI GUNCELLE
+echo  8. DERLEME MODU VE ADRESINI GUNCELLE (buildEnv / buildUrl)
 echo ======================================================
 echo.
 set CURR_ENV=
-set CURR_TEST_URL=
-set CURR_LIVE_URL=
-set CURR_ACTIVE_URL=
+set CURR_BUILD_URL=
 
 for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-env') do (
     if "%%A"=="MEVCUT_ENV" set CURR_ENV=%%B
-    if "%%A"=="MEVCUT_TEST_URL" set CURR_TEST_URL=%%B
-    if "%%A"=="MEVCUT_LIVE_URL" set CURR_LIVE_URL=%%B
-    if "%%A"=="MEVCUT_ACTIVE_URL" set CURR_ACTIVE_URL=%%B
+    if "%%A"=="MEVCUT_BUILD_URL" set CURR_BUILD_URL=%%B
 )
 
 echo Mevcut Ayarlar:
 echo ------------------------------------------------------
-echo   Aktif Derleme Modu : !CURR_ENV!
-echo   Aktif Baglanti URL : !CURR_ACTIVE_URL!
-echo   Test IP Adresi     : !CURR_TEST_URL!
-echo   Canli Site URL     : !CURR_LIVE_URL!
+echo   Aktif Derleme Modu (buildEnv) : !CURR_ENV!
+echo   Hedef Baglanti URL (buildUrl) : !CURR_BUILD_URL!
 echo ------------------------------------------------------
 echo.
 echo Yapmak istediginiz islem:
-echo   1. Sadece Modu Degistir (Test <-> Canli)
-echo   2. Test IP Adresini Guncelle (Mevcut: !CURR_TEST_URL!)
-echo   3. Canli Site URL'sini Guncelle (Mevcut: !CURR_LIVE_URL!)
-echo   4. Tum Ayarlari Degistir (Mod + Test IP + Canli URL)
+echo   1. Derleme Modunu Degistir (live / test)
+echo   2. Hedef Baglanti URL (buildUrl) Degistir
+echo   3. Her Ikisini de Degistir
 echo   0. Ana Menuye Don
 echo.
-set /p ENV_OPTION=Seciminiz [0-4]: 
+set /p ENV_OPTION=Seciminiz [0-3]: 
 
 if "%ENV_OPTION%"=="0" goto MENU
 
-set NEW_MODE=-
-set NEW_TEST=-
-set NEW_LIVE=-
+set NEW_MODE=!CURR_ENV!
+set NEW_URL=-
 
 if "%ENV_OPTION%"=="1" (
     echo.
     echo Mod Secimi:
-    echo   1. Test Modu (Yerel IP: !CURR_TEST_URL!)
-    echo   2. Canli Mod (Canli Site: !CURR_LIVE_URL!)
+    echo   1. Canli Mod (live)
+    echo   2. Test Modu (test)
     set /p M_CHOICE=Seciminiz [1-2]: 
-    if "!M_CHOICE!"=="1" set NEW_MODE=test
-    if "!M_CHOICE!"=="2" set NEW_MODE=live
+    if "!M_CHOICE!"=="1" set NEW_MODE=live
+    if "!M_CHOICE!"=="2" set NEW_MODE=test
 )
 
 if "%ENV_OPTION%"=="2" (
     echo.
-    set /p NEW_TEST=Yeni Test IP Adresi [!CURR_TEST_URL!]: 
+    set /p NEW_URL=Yeni Hedef URL (buildUrl) [!CURR_BUILD_URL!]: 
 )
 
 if "%ENV_OPTION%"=="3" (
     echo.
-    set /p NEW_LIVE=Yeni Canli Site URL [!CURR_LIVE_URL!]: 
-)
-
-if "%ENV_OPTION%"=="4" (
-    echo.
     echo Mod Secimi:
-    echo   1. Test Modu
-    echo   2. Canli Mod
+    echo   1. Canli Mod (live)
+    echo   2. Test Modu (test)
     set /p M_CHOICE=Seciminiz [1-2]: 
-    if "!M_CHOICE!"=="1" set NEW_MODE=test
-    if "!M_CHOICE!"=="2" set NEW_MODE=live
+    if "!M_CHOICE!"=="1" set NEW_MODE=live
+    if "!M_CHOICE!"=="2" set NEW_MODE=test
 
     echo.
-    set /p NEW_TEST=Yeni Test IP Adresi [!CURR_TEST_URL!]: 
-    set /p NEW_LIVE=Yeni Canli Site URL [!CURR_LIVE_URL!]: 
+    set /p NEW_URL=Yeni Hedef URL (buildUrl) [!CURR_BUILD_URL!]: 
 )
 
-if "!NEW_TEST!"=="" set NEW_TEST=-
-if "!NEW_LIVE!"=="" set NEW_LIVE=-
+if "!NEW_URL!"=="" set NEW_URL=-
 
-node update-app-info.js --set-env "!NEW_MODE!" "!NEW_LIVE!" "!NEW_TEST!"
+node update-app-info.js --set-env "!NEW_MODE!" "!NEW_URL!"
 
 echo.
-echo [BASARILI] Yapilandirma ve baglanti adresleri guncellendi!
+echo [BASARILI] buildEnv ve buildUrl guncellendi!
 echo.
 pause
 goto MENU
@@ -444,6 +428,120 @@ if "%GH_OPT%"=="3" (
     goto MENU
 )
 
+goto MENU
+
+:CUSTOM_SETTINGS
+cls
+echo ======================================================
+echo  10. OZELLESTIRMELER VE GELISMIS AYARLAR
+echo ======================================================
+echo.
+set CURR_TOKEN=
+set CURR_UA_PRE=
+set CURR_ZOOM=
+set CURR_ORI=
+
+for /f "tokens=1,* delims==" %%A in ('node update-app-info.js --get-custom') do (
+    if "%%A"=="MEVCUT_SECRET_TOKEN" set CURR_TOKEN=%%B
+    if "%%A"=="MEVCUT_UA_PREFIX" set CURR_UA_PRE=%%B
+    if "%%A"=="MEVCUT_DISABLE_ZOOM" set CURR_ZOOM=%%B
+    if "%%A"=="MEVCUT_ORIENTATION" set CURR_ORI=%%B
+)
+
+if "!CURR_TOKEN!"=="" set CURR_TOKEN=Evdeiz_Secure_App_Key_2026_x87f
+if "!CURR_UA_PRE!"=="" set CURR_UA_PRE=EvdeizApp
+if "!CURR_ZOOM!"=="" set CURR_ZOOM=true
+if "!CURR_ORI!"=="" set CURR_ORI=portrait
+
+set ZOOM_TXT=Aktif (Zoom Yapilamaz)
+if "!CURR_ZOOM!"=="false" set ZOOM_TXT=Pasif (Zoom Yapilabilir)
+
+echo Mevcut Ozellestirme Ayarlari:
+echo ------------------------------------------------------
+echo   1. App Secret Token  : !CURR_TOKEN!
+echo   2. User-Agent On Eki : !CURR_UA_PRE!
+echo   3. Zoom Engelleme    : !ZOOM_TXT!
+echo   4. Ekran Oryantasyon : !CURR_ORI!
+echo ------------------------------------------------------
+echo.
+echo Yapmak istediginiz islem:
+echo   1. App Secret Token Degistir
+echo   2. User-Agent On Eki Degistir
+echo   3. Zoom Engelleme Durumunu Degistir (Ac / Kapat)
+echo   4. Ekran Oryantasyonunu Degistir (portrait / landscape / default)
+echo   5. Tum Ayarlari Degistir
+echo   0. Ana Menuye Don
+echo.
+echo ======================================================
+set /p CUST_OPT=Seciminiz [0-5]: 
+
+if "%CUST_OPT%"=="0" goto MENU
+
+set N_TOKEN=-
+set N_UA=-
+set N_ZOOM=-
+set N_ORI=-
+
+if "%CUST_OPT%"=="1" (
+    echo.
+    set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
+)
+
+if "%CUST_OPT%"=="2" (
+    echo.
+    set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
+)
+
+if "%CUST_OPT%"=="3" (
+    echo.
+    echo Zoom Engelleme Secimi:
+    echo   1. Zoom Engelle (Aktif - Zoom Yapilamaz)
+    echo   2. Zoom Izin Ver (Pasif - Zoom Yapilabilir)
+    set /p Z_CHOICE=Seciminiz [1-2]: 
+    if "!Z_CHOICE!"=="1" set N_ZOOM=true
+    if "!Z_CHOICE!"=="2" set N_ZOOM=false
+)
+
+if "%CUST_OPT%"=="4" (
+    echo.
+    echo Ekran Oryantasyonu Secimi:
+    echo   1. Dikey (portrait)
+    echo   2. Yatay (landscape)
+    echo   3. Otomatik (default)
+    set /p O_CHOICE=Seciminiz [1-3]: 
+    if "!O_CHOICE!"=="1" set N_ORI=portrait
+    if "!O_CHOICE!"=="2" set N_ORI=landscape
+    if "!O_CHOICE!"=="3" set N_ORI=default
+)
+
+if "%CUST_OPT%"=="5" (
+    echo.
+    set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
+    set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
+    echo.
+    echo Zoom Engelleme Secimi [1: Engelle, 2: Izin Ver]:
+    set /p Z_CHOICE=Seciminiz [1-2]: 
+    if "!Z_CHOICE!"=="1" set N_ZOOM=true
+    if "!Z_CHOICE!"=="2" set N_ZOOM=false
+    echo.
+    echo Ekran Oryantasyonu [1: portrait, 2: landscape, 3: default]:
+    set /p O_CHOICE=Seciminiz [1-3]: 
+    if "!O_CHOICE!"=="1" set N_ORI=portrait
+    if "!O_CHOICE!"=="2" set N_ORI=landscape
+    if "!O_CHOICE!"=="3" set N_ORI=default
+)
+
+if "!N_TOKEN!"=="" set N_TOKEN=-
+if "!N_UA!"=="" set N_UA=-
+if "!N_ZOOM!"=="" set N_ZOOM=-
+if "!N_ORI!"=="" set N_ORI=-
+
+node update-app-info.js --set-custom "!N_TOKEN!" "!N_UA!" "!N_ZOOM!" "!N_ORI!"
+
+echo.
+echo [BASARILI] Ozellestirme ayari guncellendi!
+echo.
+pause
 goto MENU
 
 

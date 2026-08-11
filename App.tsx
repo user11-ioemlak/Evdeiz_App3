@@ -16,11 +16,13 @@ import * as Network from 'expo-network';
 import * as Device from 'expo-device';
 import appJson from './app.json';
 
-const TARGET_URL = appJson.expo?.extra?.activeUrl || appJson.expo?.extra?.liveUrl || appJson.expo?.extra?.testUrl;
+const TARGET_URL = appJson.expo?.extra?.buildUrl || '';
 const APP_NAME = appJson.expo?.name || 'Evdeiz';
 const APP_VERSION = appJson.expo?.version || '1.0.0';
-const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
-const CUSTOM_USER_AGENT = `EvdeizApp/${APP_VERSION} (${Platform.OS}; ${Device.modelName || 'MobileNativeContainer'})`;
+const APP_SECRET_TOKEN = appJson.expo?.extra?.appSecretToken || 'Evdeiz_Secure_App_Key_2026_x87f';
+const USER_AGENT_PREFIX = appJson.expo?.extra?.customUserAgentPrefix || 'EvdeizApp';
+const IS_ZOOM_DISABLED = appJson.expo?.extra?.disableZoom !== false;
+const CUSTOM_USER_AGENT = `${USER_AGENT_PREFIX}/${APP_VERSION} (${Platform.OS}; ${Device.modelName || 'MobileNativeContainer'})`;
 
 const DISABLE_ZOOM_SCRIPT = `
   (function() {
@@ -161,11 +163,11 @@ export default function App() {
             originWhitelist={['*']}
             mixedContentMode="always"
             pullToRefreshEnabled={true}
-            scalesPageToFit={false}
-            setBuiltInZoomControls={false}
-            setDisplayZoomControls={false}
+            scalesPageToFit={!IS_ZOOM_DISABLED}
+            setBuiltInZoomControls={!IS_ZOOM_DISABLED}
+            setDisplayZoomControls={!IS_ZOOM_DISABLED}
             textZoom={100}
-            injectedJavaScript={DISABLE_ZOOM_SCRIPT}
+            injectedJavaScript={IS_ZOOM_DISABLED ? DISABLE_ZOOM_SCRIPT : undefined}
             onNavigationStateChange={(navState: WebViewNavigation) => {
               setCanGoBack(navState.canGoBack);
             }}
