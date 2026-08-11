@@ -12,37 +12,60 @@ import {
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
+import * as Device from 'expo-device';
 import appJson from './app.json';
 
 const TARGET_URL = appJson.expo?.extra?.activeUrl || appJson.expo?.extra?.liveUrl || appJson.expo?.extra?.testUrl;
 const APP_NAME = appJson.expo?.name || 'Evdeiz';
 const APP_VERSION = appJson.expo?.version || '1.0.0';
 const APP_SECRET_TOKEN = 'Evdeiz_Secure_App_Key_2026_x87f';
-const CUSTOM_USER_AGENT = `EvdeizApp/${APP_VERSION} (${Platform.OS}; MobileNativeContainer)`;
+const CUSTOM_USER_AGENT = `EvdeizApp/${APP_VERSION} (${Platform.OS}; ${Device.modelName || 'MobileNativeContainer'})`;
 
 export default function App() {
   const webViewRef = useRef<WebView<{}>>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [deviceIp, setDeviceIp] = useState<string>('');
   const [isNetworkConnected, setIsNetworkConnected] = useState<boolean>(true);
+  const [isReady, setIsReady] = useState(false);
 
-  const checkNetworkStatus = async () => {
+  const [deviceInfo, setDeviceInfo] = useState({
+    ip: '',
+    deviceName: Device.deviceName || '',
+    modelName: Device.modelName || Platform.OS,
+    osVersion: Device.osVersion || String(Platform.Version),
+    brand: Device.brand || '',
+    isPhysicalDevice: true,
+  });
+
+  const loadDeviceInfo = async () => {
     try {
-      const state = await Network.getNetworkStateAsync();
-      const connected = !!(state.isConnected && state.isInternetReachable !== false);
-      setIsNetworkConnected(connected);
-      const ip = await Network.getIpAddressAsync();
-      if (ip) setDeviceIp(ip);
+      const [ip, netState] = await Promise.all([
+        Network.getIpAddressAsync().catch(() => ''),
+        Network.getNetworkStateAsync().catch(() => null),
+      ]);
+
+      setDeviceInfo({
+        ip: ip || '',
+        deviceName: Device.deviceName || Platform.OS,
+        modelName: Device.modelName || Platform.OS,
+        osVersion: Device.osVersion || String(Platform.Version),
+        brand: Device.brand || Platform.OS,
+        isPhysicalDevice: Device.isDevice,
+      });
+
+      if (netState) {
+        setIsNetworkConnected(!!(netState.isConnected && netState.isInternetReachable !== false));
+      }
     } catch {
       setIsNetworkConnected(true);
+    } finally {
+      setIsReady(true);
     }
   };
 
-  // Get local device IP address
   useEffect(() => {
-    checkNetworkStatus();
+    loadDeviceInfo();
   }, []);
 
   // Handle hardware back button on Android
@@ -64,7 +87,7 @@ export default function App() {
   const handleRetry = async () => {
     setIsLoading(true);
     setHasError(false);
-    await checkNetworkStatus();
+    await loadDeviceInfo();
     if (webViewRef.current) {
       webViewRef.current.reload();
     }
@@ -75,7 +98,12 @@ export default function App() {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.container}>
-        {!hasError ? (
+        {!isReady ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.loadingText}>Başlatılıyor...</Text>
+          </View>
+        ) : !hasError ? (
           <WebView<{}>
             ref={webViewRef}
             source={{
@@ -84,7 +112,12 @@ export default function App() {
                 'X-App-Secret-Key': APP_SECRET_TOKEN,
                 'X-App-Version': APP_VERSION,
                 'X-App-Platform': Platform.OS,
-                'X-App-Local-IP': deviceIp,
+                'X-App-Local-IP': deviceInfo.ip,
+                'X-App-Device-Name': deviceInfo.deviceName,
+                'X-App-Device-Model': deviceInfo.modelName,
+                'X-App-OS-Version': deviceInfo.osVersion,
+                'X-App-Device-Brand': deviceInfo.brand,
+                'X-App-Is-Physical-Device': deviceInfo.isPhysicalDevice ? 'true' : 'false',
               },
             }}
             userAgent={CUSTOM_USER_AGENT}
@@ -109,7 +142,7 @@ export default function App() {
             }}
             onError={() => {
               setIsLoading(false);
-              checkNetworkStatus().then(() => {
+              loadDeviceInfo().then(() => {
                 setHasError(true);
               });
             }}
