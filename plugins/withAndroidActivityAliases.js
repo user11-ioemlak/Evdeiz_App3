@@ -2,12 +2,6 @@ const { withAndroidManifest } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const SUPPORTED_THEMES = [
-  '19Mayis', '23Nisan', '30Agustos', '29Ekim',
-  'RamazanBayrami', 'KurbanBayrami', 'Yilbasi', '10Kasim',
-  'Test', 'Ozel1', 'Ozel2', 'Ozel3', 'Ozel4', 'Ozel5'
-];
-
 module.exports = function withAndroidActivityAliases(config) {
   return withAndroidManifest(config, (config) => {
     const androidManifest = config.modResults;
@@ -15,7 +9,23 @@ module.exports = function withAndroidActivityAliases(config) {
     const packageName = config.android?.package || 'com.evdeiz.app';
     const projectRoot = config._internal?.projectRoot || process.cwd();
 
-    for (const theme of SUPPORTED_THEMES) {
+    // Dynamically discover all alternate icon theme names from assets/alternate_icons/
+    const alternateDir = path.join(projectRoot, 'assets', 'alternate_icons');
+    let themes = [];
+    if (fs.existsSync(alternateDir)) {
+      themes = fs.readdirSync(alternateDir, { withFileTypes: true })
+        .filter(d => d.isDirectory())
+        .map(d => d.name);
+    }
+
+    if (themes.length === 0) {
+      console.log('[withAndroidActivityAliases] No alternate icon directories found in assets/alternate_icons.');
+      return config;
+    }
+
+    console.log(`[withAndroidActivityAliases] Dynamically configuring Android activity-aliases for themes: ${themes.join(', ')}`);
+
+    for (const theme of themes) {
       const aliasName = `${packageName}.MainActivityAlias_${theme}`;
       const lowerTheme = theme.toLowerCase();
 
@@ -24,7 +34,7 @@ module.exports = function withAndroidActivityAliases(config) {
       const altResPath = path.join(projectRoot, 'android', 'app', 'src', 'main', 'res', 'mipmap-hdpi', `ic_launcher_${lowerTheme}.png`);
       const hasCustomIcon = fs.existsSync(altAssetPath) || fs.existsSync(altResPath);
 
-      // If custom PNG does not exist yet, fallback to default launcher icon to prevent AAPT2 resource errors
+      // If custom PNG exists, use theme drawable; otherwise fallback to default launcher icon
       const iconDrawable = hasCustomIcon ? `@mipmap/ic_launcher_${lowerTheme}` : `@mipmap/ic_launcher`;
 
       if (!application['activity-alias']) {
