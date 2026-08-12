@@ -197,7 +197,9 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
       };
     }
 
-    if (lastCampaignId === campaignId) {
+    // Bu özel gün için kullanıcıya daha önce sorulmuş mu?
+    const savedCampaignId = await AsyncStorage.getItem(STORAGE_KEY_LAST_CAMPAIGN);
+    if (savedCampaignId === campaignId) {
       // Bu özel gün için kullanıcıya zaten 1 defa sorulmuş (kabul veya red). Tekrar sorma!
       return {
         hasActiveCampaign: true,
