@@ -76,6 +76,9 @@
       "customUserAgentPrefix": "EvdeizApp",
       "disableZoom": true,
       "iconCampaignUrl": "https://ioemlak.com/app_icon/config.json"
-    }
+    },
+    "plugins": [
+      "./plugins/withAndroidActivityAliases"
+    ]
   }
 }

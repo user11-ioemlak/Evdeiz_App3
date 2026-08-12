@@ -61,29 +61,38 @@ function getCampaignUrl(): string {
 // ────────────────────────────────────────────
 
 async function fetchCampaignConfig(): Promise<IconCampaignConfig | null> {
-  try {
-    const url = getCampaignUrl();
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Cache-Control': 'no-cache' },
-    });
+  const primaryUrl = getCampaignUrl();
+  const fallbackUrl = 'https://ioemlak.com/app_icon/config.json';
+  const urlsToTry = primaryUrl === fallbackUrl ? [primaryUrl] : [primaryUrl, fallbackUrl];
 
-    if (!response.ok) {
-      console.warn(`[IconCampaign] API yanıt hatası: ${response.status}`);
-      return null;
+  for (const url of urlsToTry) {
+    try {
+      console.log(`[IconCampaign] config.json deneniyor: ${url}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+
+      if (!response.ok) {
+        console.warn(`[IconCampaign] ${url} HTTP hatası: ${response.status}`);
+        continue;
+      }
+
+      const data: IconCampaignConfig = await response.json();
+      if (!data.success || !Array.isArray(data.ozel_gunler)) {
+        console.warn(`[IconCampaign] ${url} verisi geçersiz:`, data);
+        continue;
+      }
+
+      console.log(`[IconCampaign] config.json başarıyla çekildi (${url}). ${data.ozel_gunler.length} özel gün mevcut.`);
+      return data;
+    } catch (error) {
+      console.warn(`[IconCampaign] ${url} erişilemedi (${(error as Error)?.message}). Sonraki deneniyor...`);
     }
-
-    const data: IconCampaignConfig = await response.json();
-    if (!data.success || !Array.isArray(data.ozel_gunler)) {
-      console.warn('[IconCampaign] API yanıtı geçersiz:', data);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('[IconCampaign] API isteği başarısız:', error);
-    return null;
   }
+
+  console.error('[IconCampaign] Hiçbir config.json URL\'sine ulaşılamadı.');
+  return null;
 }
 
 // ────────────────────────────────────────────
@@ -98,9 +107,9 @@ function findActiveCampaign(config: IconCampaignConfig): OzelGun | null {
     const end = new Date(gun.bitis_tarihi);
 
     if (now >= start && now <= end) {
-      // Platform'a göre dosyaların var olup olmadığını kontrol et
+      // Platform'a göre temanın tanımlı olup olmadığını kontrol et
       const platformInfo = Platform.OS === 'ios' ? gun.ios : gun.android;
-      if (platformInfo.dosyalar && platformInfo.dosyalar.length > 0) {
+      if (platformInfo && platformInfo.tema) {
         return gun;
       }
     }
@@ -156,6 +165,7 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
   try {
     // Alternate icon desteği kontrolü
     if (!supportsAlternateIcons()) {
+      console.log('[IconCampaign] Cihaz/Ortam alternate icon desteği sunmuyor.');
       return defaultResult;
     }
 
@@ -170,8 +180,10 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
 
     // Aktif kampanya yok
     if (!activeCampaign) {
+      console.log('[IconCampaign] Bugün için aktif özel gün bulunamadı.');
       // Varsayılan olmayan bir ikon aktifse, geri dön
       if (currentIcon !== null || (savedTema && savedTema !== 'default')) {
+        console.log('[IconCampaign] Özel gün sona ermiş, varsayılan ikona dönülüyor.');
         return {
           ...defaultResult,
           shouldResetToDefault: true,
@@ -185,8 +197,11 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
     const tema = platformInfo.tema;
     const campaignId = getCampaignId(activeCampaign);
 
+    console.log(`[IconCampaign] Aktif Özel Gün: "${activeCampaign.ozel_gun_adi}" | Tema: ${tema} | Mevcut İkon: ${currentIcon || 'Varsayılan'}`);
+
     // İkon zaten doğru temada mı?
     if (currentIcon === tema) {
+      console.log(`[IconCampaign] İkon zaten "${tema}" temasında.`);
       return {
         hasActiveCampaign: true,
         campaign: activeCampaign,
@@ -200,7 +215,7 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
     // Bu özel gün için kullanıcıya daha önce sorulmuş mu?
     const savedCampaignId = await AsyncStorage.getItem(STORAGE_KEY_LAST_CAMPAIGN);
     if (savedCampaignId === campaignId) {
-      // Bu özel gün için kullanıcıya zaten 1 defa sorulmuş (kabul veya red). Tekrar sorma!
+      console.log(`[IconCampaign] "${activeCampaign.ozel_gun_adi}" için kullanıcıya daha önce 1 defa sorulmuş.`);
       return {
         hasActiveCampaign: true,
         campaign: activeCampaign,
@@ -210,6 +225,8 @@ export async function checkIconCampaign(): Promise<CampaignCheckResult> {
         shouldResetToDefault: false,
       };
     }
+
+    console.log(`[IconCampaign] Kullanıcıya onay penceresi gösteriliyor: "${activeCampaign.ozel_gun_adi}"`);
 
     // Kullanıcıya sor
     return {
