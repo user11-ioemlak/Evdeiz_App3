@@ -85,6 +85,54 @@ $vpnDetectionReasons= trim($_SERVER['HTTP_X_APP_VPN_DETECTION_REASONS'] ?? '');
 $userAgent          = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $remoteIp           = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
+// ---------- SUNUCU TARAFLI VPN & PROXY IP KONTROLÜ ----------
+$knownVpnPrefixes = [
+    '65.49.',    // UltraReach (Ultrasurf VPN)
+    '185.220.',  // Tor Exit Nodes
+    '185.221.',  // Tor Exit Nodes
+    '171.25.',   // Tor Exit Nodes
+    '109.70.',   // Tor Exit Nodes
+    '198.96.',   // Psiphon
+    '198.97.',   // Psiphon
+    '198.98.',   // Psiphon
+    '104.28.',   // Cloudflare WARP / Proxy
+    '162.158.',  // Cloudflare WARP / Proxy
+    '141.98.',   // Datacenter / VPN IP
+    '185.156.',  // Datacenter / VPN IP
+    '185.191.',  // Datacenter / VPN IP
+    '185.246.',  // Datacenter / VPN IP
+    '193.176.',  // Datacenter / VPN IP
+];
+
+$serverDetectedVpn = false;
+foreach ($knownVpnPrefixes as $prefix) {
+    if (str_starts_with($remoteIp, $prefix)) {
+        $serverDetectedVpn = true;
+        break;
+    }
+}
+
+// Proxy başlıkları (Reverse proxy / Anonymizer / HTTP Proxy)
+$proxyHeadersToCheck = ['HTTP_VIA', 'HTTP_FORWARDED', 'HTTP_PROXY_CONNECTION', 'HTTP_X_BLUECOAT_VIA'];
+foreach ($proxyHeadersToCheck as $ph) {
+    if (!empty($_SERVER[$ph])) {
+        $serverDetectedVpn = true;
+        break;
+    }
+}
+
+if ($serverDetectedVpn) {
+    $isVpnActive = true;
+    $vpnSuspicionScore = max($vpnSuspicionScore ?? 0, 90);
+    if (!empty($vpnDetectionReasons)) {
+        if (!str_contains($vpnDetectionReasons, 'server_vpn_ip_detected')) {
+            $vpnDetectionReasons .= ',server_vpn_ip_detected';
+        }
+    } else {
+        $vpnDetectionReasons = 'server_vpn_ip_detected';
+    }
+}
+
 // ---------- GÜVENLİ DİZİNLER (web root dışı önerilir) ----------
 // Not: Bu dizinleri idealde web root'un dışına taşı (örn. /home/user/storage/...).
 // Mümkün değilse en azından .htaccess ile erişimi kapat (aşağıda dosyaları var).

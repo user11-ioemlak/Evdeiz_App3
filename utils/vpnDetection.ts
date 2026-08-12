@@ -51,7 +51,14 @@ export async function detectVpn(ip: string): Promise<VpnDetectionResult> {
     }
   }
 
-  // 2. expo-network check -> Weight: 30
+  // 2. Known VPN IP Prefix check (UltraReach / Ultrasurf: 65.49.x.x, Tor, Psiphon) -> Weight: 70
+  const knownVpnIpPrefixes = ['65.49.', '185.220.', '185.221.', '171.25.', '109.70.', '198.96.', '198.97.', '198.98.'];
+  if (ip && knownVpnIpPrefixes.some(prefix => ip.startsWith(prefix))) {
+    score += 70;
+    reasons.push('known_vpn_ip_range');
+  }
+
+  // 3. expo-network check -> Weight: 30
   try {
     const netState = await Network.getNetworkStateAsync().catch(() => null);
     if (netState) {
@@ -68,7 +75,7 @@ export async function detectVpn(ip: string): Promise<VpnDetectionResult> {
     // Ignore error
   }
 
-  // 3. Local IP anomaly check -> Weight: 5
+  // 4. Local IP anomaly check -> Weight: 5
   if (!ip || ip === '0.0.0.0' || ip === '127.0.0.1') {
     score += 5;
     reasons.push('anomalous_local_ip');

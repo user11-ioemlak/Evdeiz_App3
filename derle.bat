@@ -76,12 +76,29 @@ echo Aktif Derleme Modu: !CURR_ENV! [!CURR_BUILD_URL!]
 echo.
 echo Derleme Modu Secin:
 echo   1. Ayni Modla Devam Et (!CURR_ENV!: !CURR_BUILD_URL!)
-echo   2. Test Moduna Gec (test)
+echo   2. Test Moduna Gec (test - Yerel IP/Port)
 echo   3. Canli Moda Gec (live)
 echo.
 set /p QUICK_ENV=Mod seciminiz [1-3, varsayilan 1]: 
-if "%QUICK_ENV%"=="2" node update-app-info.js --set-env test -
-if "%QUICK_ENV%"=="3" node update-app-info.js --set-env live -
+if "%QUICK_ENV%"=="2" goto QUICK_TEST_PROMPT
+if "%QUICK_ENV%"=="3" node update-app-info.js --set-env live https://ioemlak.com/
+goto AFTER_QUICK_ENV
+
+:QUICK_TEST_PROMPT
+echo.
+echo Test Modu - Yerel Sunucu IP ve Port Bilgileri:
+set /p LOCAL_IP=Yerel Sunucu IP Adresi / Hostname [varsayilan: 192.168.1.35]: 
+if "!LOCAL_IP!"=="" set LOCAL_IP=192.168.1.35
+set /p LOCAL_PORT=Yerel Sunucu Portu [varsayilan: 80]: 
+if "!LOCAL_PORT!"=="" set LOCAL_PORT=80
+if "!LOCAL_PORT!"=="80" (
+    set Q_URL=http://!LOCAL_IP!/
+) else (
+    set Q_URL=http://!LOCAL_IP!:!LOCAL_PORT!/
+)
+node update-app-info.js --set-env test !Q_URL!
+
+:AFTER_QUICK_ENV
 
 echo.
 if not exist ".git" (
@@ -341,40 +358,67 @@ echo.
 set /p ENV_OPTION=Seciminiz [0-3]: 
 
 if "%ENV_OPTION%"=="0" goto MENU
+if "%ENV_OPTION%"=="1" goto ENV_OPT1
+if "%ENV_OPTION%"=="2" goto ENV_OPT2
+if "%ENV_OPTION%"=="3" goto ENV_OPT3
+goto MENU
 
+:ENV_OPT1
 set NEW_MODE=!CURR_ENV!
 set NEW_URL=-
+echo.
+echo Mod Secimi:
+echo   1. Canli Mod (live)
+echo   2. Test Modu (test)
+set /p M_CHOICE=Seciminiz [1-2]: 
+if "!M_CHOICE!"=="1" goto SET_LIVE_SUB
+if "!M_CHOICE!"=="2" goto SET_TEST_SUB
+goto APPLY_ENV
 
-if "%ENV_OPTION%"=="1" (
-    echo.
-    echo Mod Secimi:
-    echo   1. Canli Mod (live)
-    echo   2. Test Modu (test)
-    set /p M_CHOICE=Seciminiz [1-2]: 
-    if "!M_CHOICE!"=="1" set NEW_MODE=live
-    if "!M_CHOICE!"=="2" set NEW_MODE=test
+:ENV_OPT2
+set NEW_MODE=!CURR_ENV!
+set NEW_URL=-
+echo.
+set /p NEW_URL=Yeni Hedef URL (buildUrl) [!CURR_BUILD_URL!]: 
+goto APPLY_ENV
+
+:ENV_OPT3
+set NEW_MODE=!CURR_ENV!
+set NEW_URL=-
+echo.
+echo Mod Secimi:
+echo   1. Canli Mod (live)
+echo   2. Test Modu (test)
+set /p M_CHOICE=Seciminiz [1-2]: 
+if "!M_CHOICE!"=="1" goto SET_LIVE_SUB
+if "!M_CHOICE!"=="2" goto SET_TEST_SUB
+goto APPLY_ENV
+
+:SET_LIVE_SUB
+set NEW_MODE=live
+echo.
+set /p CANLI_URL=Canli Sunucu URL (buildUrl) [varsayilan: https://ioemlak.com/]: 
+if "!CANLI_URL!"=="" set CANLI_URL=https://ioemlak.com/
+set NEW_URL=!CANLI_URL!
+goto APPLY_ENV
+
+:SET_TEST_SUB
+set NEW_MODE=test
+echo.
+echo Test Modu - Yerel Sunucu IP ve Port Bilgileri:
+set /p LOCAL_IP=Yerel Sunucu IP Adresi / Hostname [varsayilan: 192.168.1.35]: 
+if "!LOCAL_IP!"=="" set LOCAL_IP=192.168.1.35
+set /p LOCAL_PORT=Yerel Sunucu Portu [varsayilan: 80]: 
+if "!LOCAL_PORT!"=="" set LOCAL_PORT=80
+if "!LOCAL_PORT!"=="80" (
+    set NEW_URL=http://!LOCAL_IP!/
+) else (
+    set NEW_URL=http://!LOCAL_IP!:!LOCAL_PORT!/
 )
+goto APPLY_ENV
 
-if "%ENV_OPTION%"=="2" (
-    echo.
-    set /p NEW_URL=Yeni Hedef URL (buildUrl) [!CURR_BUILD_URL!]: 
-)
-
-if "%ENV_OPTION%"=="3" (
-    echo.
-    echo Mod Secimi:
-    echo   1. Canli Mod (live)
-    echo   2. Test Modu (test)
-    set /p M_CHOICE=Seciminiz [1-2]: 
-    if "!M_CHOICE!"=="1" set NEW_MODE=live
-    if "!M_CHOICE!"=="2" set NEW_MODE=test
-
-    echo.
-    set /p NEW_URL=Yeni Hedef URL (buildUrl) [!CURR_BUILD_URL!]: 
-)
-
+:APPLY_ENV
 if "!NEW_URL!"=="" set NEW_URL=-
-
 node update-app-info.js --set-env "!NEW_MODE!" "!NEW_URL!"
 
 echo.
@@ -476,61 +520,83 @@ echo ======================================================
 set /p CUST_OPT=Seciminiz [0-5]: 
 
 if "%CUST_OPT%"=="0" goto MENU
+if "%CUST_OPT%"=="1" goto CUST_OPT1
+if "%CUST_OPT%"=="2" goto CUST_OPT2
+if "%CUST_OPT%"=="3" goto CUST_OPT3
+if "%CUST_OPT%"=="4" goto CUST_OPT4
+if "%CUST_OPT%"=="5" goto CUST_OPT5
+goto MENU
 
+:CUST_OPT1
 set N_TOKEN=-
 set N_UA=-
 set N_ZOOM=-
 set N_ORI=-
+echo.
+set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
+goto APPLY_CUST
 
-if "%CUST_OPT%"=="1" (
-    echo.
-    set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
-)
+:CUST_OPT2
+set N_TOKEN=-
+set N_UA=-
+set N_ZOOM=-
+set N_ORI=-
+echo.
+set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
+goto APPLY_CUST
 
-if "%CUST_OPT%"=="2" (
-    echo.
-    set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
-)
+:CUST_OPT3
+set N_TOKEN=-
+set N_UA=-
+set N_ZOOM=-
+set N_ORI=-
+echo.
+echo Zoom Engelleme Secimi:
+echo   1. Zoom Engelle (Aktif - Zoom Yapilamaz)
+echo   2. Zoom Izin Ver (Pasif - Zoom Yapilabilir)
+set /p Z_CHOICE=Seciminiz [1-2]: 
+if "!Z_CHOICE!"=="1" set N_ZOOM=true
+if "!Z_CHOICE!"=="2" set N_ZOOM=false
+goto APPLY_CUST
 
-if "%CUST_OPT%"=="3" (
-    echo.
-    echo Zoom Engelleme Secimi:
-    echo   1. Zoom Engelle (Aktif - Zoom Yapilamaz)
-    echo   2. Zoom Izin Ver (Pasif - Zoom Yapilabilir)
-    set /p Z_CHOICE=Seciminiz [1-2]: 
-    if "!Z_CHOICE!"=="1" set N_ZOOM=true
-    if "!Z_CHOICE!"=="2" set N_ZOOM=false
-)
+:CUST_OPT4
+set N_TOKEN=-
+set N_UA=-
+set N_ZOOM=-
+set N_ORI=-
+echo.
+echo Ekran Oryantasyonu Secimi:
+echo   1. Dikey (portrait)
+echo   2. Yatay (landscape)
+echo   3. Otomatik (default)
+set /p O_CHOICE=Seciminiz [1-3]: 
+if "!O_CHOICE!"=="1" set N_ORI=portrait
+if "!O_CHOICE!"=="2" set N_ORI=landscape
+if "!O_CHOICE!"=="3" set N_ORI=default
+goto APPLY_CUST
 
-if "%CUST_OPT%"=="4" (
-    echo.
-    echo Ekran Oryantasyonu Secimi:
-    echo   1. Dikey (portrait)
-    echo   2. Yatay (landscape)
-    echo   3. Otomatik (default)
-    set /p O_CHOICE=Seciminiz [1-3]: 
-    if "!O_CHOICE!"=="1" set N_ORI=portrait
-    if "!O_CHOICE!"=="2" set N_ORI=landscape
-    if "!O_CHOICE!"=="3" set N_ORI=default
-)
+:CUST_OPT5
+set N_TOKEN=-
+set N_UA=-
+set N_ZOOM=-
+set N_ORI=-
+echo.
+set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
+set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
+echo.
+echo Zoom Engelleme Secimi [1: Engelle, 2: Izin Ver]:
+set /p Z_CHOICE=Seciminiz [1-2]: 
+if "!Z_CHOICE!"=="1" set N_ZOOM=true
+if "!Z_CHOICE!"=="2" set N_ZOOM=false
+echo.
+echo Ekran Oryantasyonu [1: portrait, 2: landscape, 3: default]:
+set /p O_CHOICE=Seciminiz [1-3]: 
+if "!O_CHOICE!"=="1" set N_ORI=portrait
+if "!O_CHOICE!"=="2" set N_ORI=landscape
+if "!O_CHOICE!"=="3" set N_ORI=default
+goto APPLY_CUST
 
-if "%CUST_OPT%"=="5" (
-    echo.
-    set /p N_TOKEN=Yeni App Secret Token [!CURR_TOKEN!]: 
-    set /p N_UA=Yeni User-Agent On Eki [!CURR_UA_PRE!]: 
-    echo.
-    echo Zoom Engelleme Secimi [1: Engelle, 2: Izin Ver]:
-    set /p Z_CHOICE=Seciminiz [1-2]: 
-    if "!Z_CHOICE!"=="1" set N_ZOOM=true
-    if "!Z_CHOICE!"=="2" set N_ZOOM=false
-    echo.
-    echo Ekran Oryantasyonu [1: portrait, 2: landscape, 3: default]:
-    set /p O_CHOICE=Seciminiz [1-3]: 
-    if "!O_CHOICE!"=="1" set N_ORI=portrait
-    if "!O_CHOICE!"=="2" set N_ORI=landscape
-    if "!O_CHOICE!"=="3" set N_ORI=default
-)
-
+:APPLY_CUST
 if "!N_TOKEN!"=="" set N_TOKEN=-
 if "!N_UA!"=="" set N_UA=-
 if "!N_ZOOM!"=="" set N_ZOOM=-

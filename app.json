@@ -34,8 +34,8 @@
     "extra": {
       "appVariant": "production",
       "githubRepo": "user13ioemlak/Evdeiz_App3",
-      "buildEnv": "live",
-      "buildUrl": "https://ioemlak.com/",
+      "buildEnv": "test",
+      "buildUrl": "http://192.168.0.3/",
       "appSecretToken": "Evdeiz_Secure_App_Key_2026_x87f",
       "customUserAgentPrefix": "EvdeizApp",
       "disableZoom": true
