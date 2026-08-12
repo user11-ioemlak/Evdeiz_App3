@@ -1,0 +1,10 @@
+{
+  "name": "vpn-detector",
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["VpnDetectorModule"]
+  },
+  "android": {
+    "modules": ["com.evdeiz.vpndetector.VpnDetectorModule"]
+  }
+}

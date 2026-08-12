@@ -21,7 +21,11 @@ export function detectEmulator(ip: string): EmulatorDetectionResult {
     const deviceName = (Device.deviceName || '').toLowerCase();
     const modelName = (Device.modelName || '').toLowerCase();
     const brand = (Device.brand || '').toLowerCase();
-    const combined = `${deviceName} ${modelName} ${brand}`;
+    const manufacturer = (Device.manufacturer || '').toLowerCase();
+    const productName = (Device.productName || '').toLowerCase();
+    const designName = (Device.designName || '').toLowerCase();
+
+    const combined = `${deviceName} ${modelName} ${brand} ${manufacturer} ${productName} ${designName}`;
 
     // 2. Extended Keyword Fingerprint Match (Weight: 60)
     const emulatorKeywords = [
@@ -30,7 +34,7 @@ export function detectEmulator(ip: string): EmulatorDetectionResult {
       'emulator', 'sdk_gphone', 'android sdk', 'goldfish',
       'ranchu', 'vbox', 'virtual', 'droid4x', 'ldplayer',
       'andy', 'windroye', 'phoenix', 'microvirt', 'vmos',
-      'shengqi', 'titan',
+      'shengqi', 'titan', 'ttvm', 'xiaowei', 'leidian',
     ];
 
     if (emulatorKeywords.some(kw => combined.includes(kw))) {
@@ -53,7 +57,13 @@ export function detectEmulator(ip: string): EmulatorDetectionResult {
     }
 
     // 5. Generic Model/Product Strings (Weight: 20)
-    if (modelName.includes('generic') || modelName.includes('sdk') || brand.includes('generic')) {
+    if (
+      modelName.includes('generic') ||
+      modelName.includes('sdk') ||
+      brand.includes('generic') ||
+      productName.includes('sdk') ||
+      productName.includes('generic')
+    ) {
       score += 20;
       reasons.push('generic_device_string');
     }
@@ -78,3 +88,4 @@ export function detectEmulator(ip: string): EmulatorDetectionResult {
     reasons,
   };
 }
+

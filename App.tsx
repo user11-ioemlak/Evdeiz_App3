@@ -15,6 +15,7 @@ import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
 import { detectEmulator } from './utils/emulatorDetection';
+import { detectVpn } from './utils/vpnDetection';
 import appJson from './app.json';
 
 const TARGET_URL = appJson.expo?.extra?.buildUrl || '';
@@ -69,6 +70,8 @@ export default function App() {
     isVpnActive: false,
     suspicionScore: 0,
     reasons: [] as string[],
+    vpnSuspicionScore: 0,
+    vpnReasons: [] as string[],
   });
 
   const loadDeviceInfo = async () => {
@@ -78,8 +81,8 @@ export default function App() {
         Network.getNetworkStateAsync().catch(() => null),
       ]);
 
-      const isVpn = netState ? (netState.type === Network.NetworkStateType.VPN || String(netState.type).toUpperCase() === 'VPN') : false;
-      const detection = detectEmulator(ip || '');
+      const emulatorDetection = detectEmulator(ip || '');
+      const vpnDetection = await detectVpn(ip || '');
 
       setDeviceInfo({
         ip: ip || '',
@@ -87,10 +90,12 @@ export default function App() {
         modelName: Device.modelName || Platform.OS,
         osVersion: Device.osVersion || String(Platform.Version),
         brand: Device.brand || Platform.OS,
-        isPhysicalDevice: detection.isPhysical,
-        isVpnActive: isVpn,
-        suspicionScore: detection.suspicionScore,
-        reasons: detection.reasons,
+        isPhysicalDevice: emulatorDetection.isPhysical,
+        isVpnActive: vpnDetection.isVpnActive,
+        suspicionScore: emulatorDetection.suspicionScore,
+        reasons: emulatorDetection.reasons,
+        vpnSuspicionScore: vpnDetection.suspicionScore,
+        vpnReasons: vpnDetection.reasons,
       });
 
       if (netState) {
@@ -164,6 +169,8 @@ export default function App() {
                 'X-App-Is-Vpn-Active': deviceInfo.isVpnActive ? 'true' : 'false',
                 'X-App-Suspicion-Score': String(deviceInfo.suspicionScore),
                 'X-App-Detection-Reasons': deviceInfo.reasons.join(','),
+                'X-App-Vpn-Suspicion-Score': String(deviceInfo.vpnSuspicionScore),
+                'X-App-Vpn-Detection-Reasons': deviceInfo.vpnReasons.join(','),
               },
             }}
             userAgent={CUSTOM_USER_AGENT}
