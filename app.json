@@ -8,10 +8,46 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
+      "icon": "./assets/icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.evdeiz.app",
       "infoPlist": {
         "CFBundleDisplayName": "Evdeiz",
+        "CFBundleIconName": "AppIcon",
+        "CFBundleIcons": {
+          "CFBundlePrimaryIcon": {
+            "CFBundleIconFiles": [
+              "AppIcon60x60"
+            ],
+            "UIPrerenderedIcon": false
+          },
+          "CFBundleAlternateIcons": {
+            "19Mayis": {
+              "CFBundleIconFiles": [
+                "19Mayis60x60"
+              ],
+              "UIPrerenderedIcon": false
+            }
+          }
+        },
+        "CFBundleIcons~ipad": {
+          "CFBundlePrimaryIcon": {
+            "CFBundleIconFiles": [
+              "AppIcon60x60",
+              "AppIcon76x76"
+            ],
+            "UIPrerenderedIcon": false
+          },
+          "CFBundleAlternateIcons": {
+            "19Mayis": {
+              "CFBundleIconFiles": [
+                "19Mayis60x60",
+                "19Mayis76x76"
+              ],
+              "UIPrerenderedIcon": false
+            }
+          }
+        },
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
@@ -38,7 +74,8 @@
       "buildUrl": "http://192.168.0.3/",
       "appSecretToken": "Evdeiz_Secure_App_Key_2026_x87f",
       "customUserAgentPrefix": "EvdeizApp",
-      "disableZoom": true
+      "disableZoom": true,
+      "iconCampaignUrl": "https://ioemlak.com/app_icon/config.json"
     }
   }
 }

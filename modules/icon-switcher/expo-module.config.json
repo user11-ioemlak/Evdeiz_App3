@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["IconSwitcherModule"]
+  },
+  "android": {
+    "modules": ["com.evdeiz.iconswitcher.IconSwitcherModule"]
+  }
+}

@@ -10,12 +10,22 @@ import {
   StatusBar,
   Platform,
   Image,
+  Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
 import { detectEmulator } from './utils/emulatorDetection';
 import { detectVpn } from './utils/vpnDetection';
+import {
+  checkIconCampaign,
+  applyIconCampaign,
+  rejectIconCampaign,
+  resetToDefaultIcon,
+  CampaignCheckResult,
+} from './utils/iconCampaign';
 import appJson from './app.json';
 
 const TARGET_URL = appJson.expo?.extra?.buildUrl || '';
@@ -59,6 +69,11 @@ export default function App() {
   const [hasError, setHasError] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState<boolean>(true);
   const [isReady, setIsReady] = useState(false);
+
+  // İkon Kampanya Durumu
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [campaignResult, setCampaignResult] = useState<CampaignCheckResult | null>(null);
+  const modalAnim = useRef(new Animated.Value(0)).current;
 
   const [deviceInfo, setDeviceInfo] = useState({
     ip: '',
@@ -105,6 +120,25 @@ export default function App() {
       setIsNetworkConnected(true);
     } finally {
       setIsReady(true);
+    }
+
+    // ─── İkon Kampanya Kontrolü ───
+    try {
+      const result = await checkIconCampaign();
+      if (result.shouldResetToDefault) {
+        await resetToDefaultIcon();
+      } else if (result.shouldPromptUser && result.campaign) {
+        setCampaignResult(result);
+        setShowIconModal(true);
+        Animated.spring(modalAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 10,
+        }).start();
+      }
+    } catch (e) {
+      console.warn('[App] İkon kampanya kontrolü başarısız:', e);
     }
   };
 
@@ -247,6 +281,92 @@ export default function App() {
           </View>
         )}
       </View>
+
+      {/* ── Özel Gün İkon Kampanya Modali ── */}
+      <Modal
+        visible={showIconModal}
+        transparent={true}
+        animationType="fade"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          if (campaignResult?.campaign) {
+            rejectIconCampaign(campaignResult.campaign);
+          }
+          setShowIconModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.modalCard,
+              {
+                transform: [
+                  {
+                    scale: modalAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
+                opacity: modalAnim,
+              },
+            ]}
+          >
+            {/* Bayrak/dekorasyon şeridi */}
+            <View style={styles.modalBanner}>
+              <Text style={styles.modalBannerEmoji}>🇹🇷</Text>
+            </View>
+
+            {/* İkon Önizleme */}
+            {campaignResult?.previewImageUrl && (
+              <View style={styles.modalIconPreview}>
+                <Image
+                  source={{ uri: campaignResult.previewImageUrl }}
+                  style={styles.modalIconImage}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+
+            {/* Kampanya Başlığı */}
+            <Text style={styles.modalTitle}>
+              {campaignResult?.campaign?.ozel_gun_adi || 'Özel Gün'}
+            </Text>
+
+            <Text style={styles.modalDescription}>
+              Bu özel güne özel tasarlanan uygulama ikonumuzu kullanmak ister misiniz?{' '}
+              Özel gün sona erdiğinde ikonunuz otomatik olarak varsayılan haline dönecektir.
+            </Text>
+
+            {/* Butonlar */}
+            <TouchableOpacity
+              style={styles.modalAcceptButton}
+              activeOpacity={0.8}
+              onPress={async () => {
+                if (campaignResult?.campaign) {
+                  await applyIconCampaign(campaignResult.campaign);
+                }
+                setShowIconModal(false);
+              }}
+            >
+              <Text style={styles.modalAcceptText}>🎉 İkonu Güncelle</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalRejectButton}
+              activeOpacity={0.8}
+              onPress={async () => {
+                if (campaignResult?.campaign) {
+                  await rejectIconCampaign(campaignResult.campaign);
+                }
+                setShowIconModal(false);
+              }}
+            >
+              <Text style={styles.modalRejectText}>Hayır, Teşekkürler</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -348,6 +468,96 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // ── İkon Kampanya Modal Stilleri ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalBanner: {
+    width: '100%',
+    height: 48,
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalBannerEmoji: {
+    fontSize: 28,
+  },
+  modalIconPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modalIconImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalAcceptButton: {
+    width: '100%',
+    backgroundColor: '#DC2626',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalAcceptText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalRejectButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  modalRejectText: {
+    color: '#64748B',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

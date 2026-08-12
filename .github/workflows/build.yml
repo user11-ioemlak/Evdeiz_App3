@@ -115,6 +115,7 @@ jobs:
         run: |
           mkdir -p ios/build/Payload
           APP_PATH=$(find ios/build/Prototype.xcarchive/Products/Applications -name "*.app" | head -n 1)
+          node copy-app-icons.js --app-path "$APP_PATH"
           cp -r "$APP_PATH" ios/build/Payload/
           cd ios/build && zip -r Prototype.ipa Payload
 
