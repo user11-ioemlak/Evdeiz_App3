@@ -24,19 +24,25 @@ export async function detectVpn(ip: string): Promise<VpnDetectionResult> {
     reasons.push(`interface_tunnel_${ifaceNameStr}`);
   }
 
-  // Native Transport VPN / Scoped VPN (Android ConnectivityManager / iOS Scoped) -> Weight: 20
+  // Native Transport VPN (Android ConnectivityManager TRANSPORT_VPN) -> Weight: 50
   if (nativeDetails.hasVpnTransport) {
-    score += 20;
+    score += 50;
     reasons.push('native_transport_vpn');
   }
 
-  // Native System Proxy check -> Weight: 20
+  // Android NET_CAPABILITY_NOT_VPN = false (System marked network as VPN) -> Weight: 50
+  if (nativeDetails.notVpnCapabilityFalse) {
+    score += 50;
+    reasons.push('android_capability_not_vpn_false');
+  }
+
+  // Native System Proxy check -> Weight: 30
   if (nativeDetails.isProxyActive) {
-    score += 20;
+    score += 30;
     reasons.push('system_proxy_detected');
   }
 
-  // Include native raw reasons if any
+  // Include raw native reasons
   if (nativeDetails.reasons && nativeDetails.reasons.length > 0) {
     for (const r of nativeDetails.reasons) {
       if (!reasons.includes(r)) {

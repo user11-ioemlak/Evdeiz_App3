@@ -4,6 +4,7 @@ export interface VpnDetailsNative {
   hasTunnelInterface: boolean;
   tunnelInterfaces: string[];
   hasVpnTransport?: boolean;
+  notVpnCapabilityFalse?: boolean;
   isProxyActive: boolean;
   reasons: string[];
 }
@@ -24,6 +25,7 @@ export function getVpnDetailsNative(): VpnDetailsNative {
           hasTunnelInterface: !!res.hasTunnelInterface,
           tunnelInterfaces: Array.isArray(res.tunnelInterfaces) ? res.tunnelInterfaces : [],
           hasVpnTransport: !!res.hasVpnTransport,
+          notVpnCapabilityFalse: !!res.notVpnCapabilityFalse,
           isProxyActive: !!res.isProxyActive,
           reasons: Array.isArray(res.reasons) ? res.reasons : [],
         };
@@ -36,6 +38,7 @@ export function getVpnDetailsNative(): VpnDetailsNative {
     hasTunnelInterface: false,
     tunnelInterfaces: [],
     hasVpnTransport: false,
+    notVpnCapabilityFalse: false,
     isProxyActive: false,
     reasons: [],
   };
