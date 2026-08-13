@@ -212,6 +212,11 @@ export default function App() {
             containerStyle={styles.webViewContainer}
             javaScriptEnabled={true}
             domStorageEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            sharedCookiesEnabled={true}
+            cacheEnabled={true}
+            incognito={false}
+            cacheMode="LOAD_DEFAULT"
             allowsInlineMediaPlayback={true}
             allowsBackForwardNavigationGestures={true}
             originWhitelist={['*']}
