@@ -186,7 +186,7 @@ export default function App() {
       }
 
       if (message.type === 'print_report' && message.html) {
-        // Native yazdırma diyaloğu
+        // Native yazdırma diyaloğu (iOS AirPrint & Android PrintManager)
         await Print.printAsync({
           html: message.html,
         });
@@ -194,13 +194,15 @@ export default function App() {
       }
 
       if (message.type === 'print_as_pdf' && message.html) {
-        // HTML'den PDF oluştur ve paylaş
+        // HTML'den standart A4 formatında vektörel PDF oluştur ve paylaş
         const filename = message.filename || 'Rapor.pdf';
         const { uri } = await Print.printToFileAsync({
           html: message.html,
+          width: 595,   // Standart A4 Point genişliği
+          height: 842,  // Standart A4 Point yüksekliği
         });
 
-        // Oluşturulan PDF'i istenen isimle taşı
+        // Oluşturulan PDF'i istenen dosya adıyla taşı
         const generatedFile = new File(uri);
         const targetFile = new File(Paths.cache, filename);
         generatedFile.move(targetFile);
