@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   BackHandler,
   SafeAreaView,
   StatusBar,
@@ -12,10 +11,13 @@ import {
   Image,
   Modal,
   Animated,
-  Dimensions,
   Linking,
+  Alert,
 } from 'react-native';
-import { WebView, WebViewNavigation } from 'react-native-webview';
+import { WebView, WebViewNavigation, WebViewMessageEvent } from 'react-native-webview';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
 import { detectEmulator } from './utils/emulatorDetection';
@@ -117,7 +119,7 @@ export default function App() {
       setIsReady(true);
     }
 
-    // ─── İkon Kampanya Kontrolü ───
+    // İkon Kampanya Kontrolü
     try {
       const result = await checkIconCampaign();
       if (result.shouldResetToDefault) {
@@ -141,38 +143,104 @@ export default function App() {
     loadDeviceInfo();
   }, []);
 
-  // Handle hardware back button on Android
+  // Android Geri Butonu
   useEffect(() => {
     if (Platform.OS !== 'android') return;
 
     const onBackPress = () => {
       if (canGoBack && webViewRef.current) {
         webViewRef.current.goBack();
-        return true; // Prevent app exit
+        return true;
       }
-      return false; // Allow standard back (app exit/minimize)
+      return false;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
   }, [canGoBack]);
 
+  // WebView'dan gelen PDF indirme / yazdırma mesajlarını işle
+  const handleWebViewMessage = useCallback(async (event: WebViewMessageEvent) => {
+    try {
+      const message = JSON.parse(event.nativeEvent.data);
+
+      if (message.type === 'download_pdf' && message.data) {
+        // Base64 PDF verisini geçici dosyaya yaz ve paylaşım sheet'i aç
+        const filename = message.filename || 'Rapor.pdf';
+        const pdfFile = new File(Paths.cache, filename);
+
+        // Base64 içeriği dosyaya yaz
+        pdfFile.write(message.data, { encoding: 'base64' });
+
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(pdfFile.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'PDF Raporu Kaydet / Paylaş',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Bilgi', 'PDF dosyası kaydedildi: ' + pdfFile.uri);
+        }
+        return;
+      }
+
+      if (message.type === 'print_report' && message.html) {
+        // Native yazdırma diyaloğu
+        await Print.printAsync({
+          html: message.html,
+        });
+        return;
+      }
+
+      if (message.type === 'print_as_pdf' && message.html) {
+        // HTML'den PDF oluştur ve paylaş
+        const filename = message.filename || 'Rapor.pdf';
+        const { uri } = await Print.printToFileAsync({
+          html: message.html,
+        });
+
+        // Oluşturulan PDF'i istenen isimle taşı
+        const generatedFile = new File(uri);
+        const targetFile = new File(Paths.cache, filename);
+        generatedFile.move(targetFile);
+
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(targetFile.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'PDF Raporu Kaydet / Paylaş',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Bilgi', 'PDF dosyası oluşturuldu: ' + targetFile.uri);
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn('[App] WebView mesaj işleme hatası:', error);
+      Alert.alert(
+        'PDF Hatası',
+        'PDF işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.'
+      );
+    }
+  }, []);
+
   const handleShouldStartLoadWithRequest = (request: { url: string; isTopFrame?: boolean }) => {
     const { url } = request;
     if (!url) return false;
 
-    // 1. Arama ve İletişim Şemaları (tel:, mailto:, sms:, whatsapp:, facetime:)
+    // 1. İletişim Şemaları (tel:, mailto:, sms:, whatsapp:, facetime:)
     const isCallOrMessage = /^(tel:|mailto:|sms:|whatsapp:|facetime:)/i.test(url);
     if (isCallOrMessage) {
       Linking.openURL(url).catch(err => {
         console.warn('[App] İletişim URL açma hatası:', err);
       });
-      return false; // WebView içinde yüklemeyi durdur (hata sayfasına gitmesini engelle)
+      return false;
     }
 
-    // 2. Harita ve Konum Şemaları (geo:, maps:, comgooglemaps:, waze:)
-    const isMap = /^(geo:|maps:|comgooglemaps:|waze:)/i.test(url) ||
-      ((url.includes('maps.google.') || url.includes('maps.apple.')) && !url.startsWith(TARGET_URL));
+    // 2. Harita Şemaları (geo:, maps:, comgooglemaps:, waze:)
+    const isMap = /^(geo:|maps:|comgooglemaps:|waze:)/i.test(url);
     if (isMap) {
       Linking.openURL(url).catch(err => {
         console.warn('[App] Harita URL açma hatası:', err);
@@ -180,16 +248,17 @@ export default function App() {
       return false;
     }
 
-    // 3. Dosya İndirme & Order İndirme Şemaları & Uzantıları (.pdf, .xlsx, .docx, .zip, download parametreleri)
-    const isDownloadFile = /\.(pdf|xlsx?|docx?|zip|rar|csv|apk|ipa|epub)(\?.*)?$/i.test(url) ||
-      /\/download(\/|\?|$)/i.test(url) ||
-      /[?&](download|export|order_pdf|indir)=/i.test(url);
+    // 3. Uygulama içi web sayfaları (TARGET_URL, /yakin/, rapor_pdf vb.) - ASLA DIŞARI ATMA
+    const isInternalWeb = url.startsWith(TARGET_URL) || 
+      url.includes('ioemlak.com') || 
+      url.includes('localhost') || 
+      url.includes('/yakin/') || 
+      url.includes('/admin/') || 
+      url.includes('rapor_pdf') || 
+      url.includes('.php');
 
-    if (isDownloadFile) {
-      Linking.openURL(url).catch(err => {
-        console.warn('[App] Dosya indirme URL açma hatası:', err);
-      });
-      return false;
+    if (isInternalWeb) {
+      return true; // WebView içinde sorunsuz yükle
     }
 
     // 4. Intent ve Mağaza Şemaları (intent:, market:, itms-apps:)
@@ -201,7 +270,7 @@ export default function App() {
       return false;
     }
 
-    // 5. Standart HTTP/HTTPS Web İstekleri
+    // 5. Diğer Standart HTTP/HTTPS Web İstekleri
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return true;
     }
@@ -278,7 +347,12 @@ export default function App() {
             onOpenWindow={(syntheticEvent) => {
               const { targetUrl } = syntheticEvent.nativeEvent;
               if (targetUrl) {
-                Linking.openURL(targetUrl).catch(() => {});
+                // Eğer hedef url app içinde ise webview içinde kalmasını sağla
+                if (targetUrl.startsWith(TARGET_URL) || targetUrl.includes('ioemlak.com') || targetUrl.startsWith('/') || !targetUrl.startsWith('http')) {
+                  webViewRef.current?.injectJavaScript(`window.location.href = '${targetUrl}'; true;`);
+                } else {
+                  Linking.openURL(targetUrl).catch(() => {});
+                }
               }
             }}
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
@@ -290,6 +364,7 @@ export default function App() {
             setDisplayZoomControls={!IS_ZOOM_DISABLED}
             textZoom={100}
             injectedJavaScript={IS_ZOOM_DISABLED ? DISABLE_ZOOM_SCRIPT : undefined}
+            onMessage={handleWebViewMessage}
             onNavigationStateChange={(navState: WebViewNavigation) => {
               setCanGoBack(navState.canGoBack);
             }}
@@ -319,7 +394,7 @@ export default function App() {
           <View style={styles.errorContainer}>
             <View style={styles.errorCard}>
               <Text style={styles.errorIcon}>
-                {!isNetworkConnected ? '🌐' : '📡'}
+                {!isNetworkConnected ? '📡' : '⚠️'}
               </Text>
               <Text style={styles.errorTitle}>
                 {!isNetworkConnected ? 'Ağ Bağlantısı Yok' : 'Sunucuya Ulaşılamıyor'}
@@ -358,7 +433,7 @@ export default function App() {
         )}
       </View>
 
-      {/* ── Özel Gün İkon Kampanya Modali ── */}
+      {/* Özel Gün İkon Kampanya Modali */}
       <Modal
         visible={showIconModal}
         transparent={true}
@@ -388,12 +463,10 @@ export default function App() {
               },
             ]}
           >
-            {/* Bayrak/dekorasyon şeridi */}
             <View style={styles.modalBanner}>
-              <Text style={styles.modalBannerEmoji}>🇹🇷</Text>
+              <Text style={styles.modalBannerEmoji}>🎉</Text>
             </View>
 
-            {/* İkon Önizleme */}
             {campaignResult?.previewImageUrl && (
               <View style={styles.modalIconPreview}>
                 <Image
@@ -404,7 +477,6 @@ export default function App() {
               </View>
             )}
 
-            {/* Kampanya Başlığı */}
             <Text style={styles.modalTitle}>
               {campaignResult?.campaign?.ozel_gun_adi || 'Özel Gün'}
             </Text>
@@ -414,7 +486,6 @@ export default function App() {
               Özel gün sona erdiğinde ikonunuz otomatik olarak varsayılan haline dönecektir.
             </Text>
 
-            {/* Butonlar */}
             <TouchableOpacity
               style={styles.modalAcceptButton}
               activeOpacity={0.8}
@@ -425,7 +496,7 @@ export default function App() {
                 setShowIconModal(false);
               }}
             >
-              <Text style={styles.modalAcceptText}>🎉 İkonu Güncelle</Text>
+              <Text style={styles.modalAcceptText}>✨ İkonu Güncelle</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -547,7 +618,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ── İkon Kampanya Modal Stilleri ──
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
