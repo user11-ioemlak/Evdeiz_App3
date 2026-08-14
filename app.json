@@ -51,12 +51,35 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "NSCameraUsageDescription": "Evdeiz, görüntülü görüşme ve canlı takip özellikleri için kameranıza erişim gerektirir.",
+        "NSMicrophoneUsageDescription": "Evdeiz, sesli arama ve görüşmeler için mikrofonunuza erişim gerektirir.",
+        "NSPhotoLibraryUsageDescription": "Evdeiz, order ve tıbbi rapor dosyalarını görüntüleyip kaydetmek için fotoğraf/dosya erişimi gerektirir.",
+        "NSPhotoLibraryAddUsageDescription": "Evdeiz, indirilen order ve sağlık raporlarını galerinize/dosyalarınıza kaydetmek için izin gerektirir.",
+        "LSApplicationQueriesSchemes": [
+          "tel",
+          "mailto",
+          "sms",
+          "whatsapp",
+          "geo",
+          "maps",
+          "comgooglemaps"
+        ]
       }
     },
     "android": {
       "package": "com.evdeiz.app",
       "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.CALL_PHONE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png",

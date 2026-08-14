@@ -46,11 +46,11 @@ $exactVersion   = '1.0.0';
 $forceHttps     = false; // Yerel testlerde engellemeyi önlemek için varsayılan false
 
 // ---------- GÜVENLİK HEADERLARI ----------
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');
-header('Referrer-Policy: no-referrer');
-header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-header('Content-Security-Policy: default-src \'self\'; style-src \'unsafe-inline\'');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)');
+header("Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https: data: blob:;");
 header('Content-Type: text/html; charset=utf-8');
 
 // ---------- HTTPS ZORUNLULUĞU ----------

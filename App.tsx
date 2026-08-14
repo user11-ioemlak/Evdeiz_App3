@@ -13,6 +13,7 @@ import {
   Modal,
   Animated,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import * as Network from 'expo-network';
@@ -38,26 +39,20 @@ const CUSTOM_USER_AGENT = `${USER_AGENT_PREFIX}/${APP_VERSION} (${Platform.OS}; 
 
 const DISABLE_ZOOM_SCRIPT = `
   (function() {
-    var meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.name = 'viewport';
-      document.getElementsByTagName('head')[0].appendChild(meta);
-    }
-    meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-    
-    var lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
-      var now = (new Date()).getTime();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
+    try {
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'viewport';
+        document.getElementsByTagName('head')[0].appendChild(meta);
       }
-      lastTouchEnd = now;
-    }, false);
-
-    document.addEventListener('gesturestart', function(e) {
-      e.preventDefault();
-    });
+      meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      style.innerHTML = 'html, body { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; } button, a, input, select, textarea, [role="button"] { touch-action: manipulation; }';
+      document.head.appendChild(style);
+    } catch(e) {}
   })();
   true;
 `;
@@ -162,6 +157,60 @@ export default function App() {
     return () => backHandler.remove();
   }, [canGoBack]);
 
+  const handleShouldStartLoadWithRequest = (request: { url: string; isTopFrame?: boolean }) => {
+    const { url } = request;
+    if (!url) return false;
+
+    // 1. Arama ve İletişim Şemaları (tel:, mailto:, sms:, whatsapp:, facetime:)
+    const isCallOrMessage = /^(tel:|mailto:|sms:|whatsapp:|facetime:)/i.test(url);
+    if (isCallOrMessage) {
+      Linking.openURL(url).catch(err => {
+        console.warn('[App] İletişim URL açma hatası:', err);
+      });
+      return false; // WebView içinde yüklemeyi durdur (hata sayfasına gitmesini engelle)
+    }
+
+    // 2. Harita ve Konum Şemaları (geo:, maps:, comgooglemaps:, waze:)
+    const isMap = /^(geo:|maps:|comgooglemaps:|waze:)/i.test(url) ||
+      ((url.includes('maps.google.') || url.includes('maps.apple.')) && !url.startsWith(TARGET_URL));
+    if (isMap) {
+      Linking.openURL(url).catch(err => {
+        console.warn('[App] Harita URL açma hatası:', err);
+      });
+      return false;
+    }
+
+    // 3. Dosya İndirme & Order İndirme Şemaları & Uzantıları (.pdf, .xlsx, .docx, .zip, download parametreleri)
+    const isDownloadFile = /\.(pdf|xlsx?|docx?|zip|rar|csv|apk|ipa|epub)(\?.*)?$/i.test(url) ||
+      /\/download(\/|\?|$)/i.test(url) ||
+      /[?&](download|export|order_pdf|indir)=/i.test(url);
+
+    if (isDownloadFile) {
+      Linking.openURL(url).catch(err => {
+        console.warn('[App] Dosya indirme URL açma hatası:', err);
+      });
+      return false;
+    }
+
+    // 4. Intent ve Mağaza Şemaları (intent:, market:, itms-apps:)
+    const isStoreOrIntent = /^(intent:|market:|itms-apps:|itms:)/i.test(url);
+    if (isStoreOrIntent) {
+      Linking.openURL(url).catch(err => {
+        console.warn('[App] Intent/Mağaza açma hatası:', err);
+      });
+      return false;
+    }
+
+    // 5. Standart HTTP/HTTPS Web İstekleri
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return true;
+    }
+
+    // 6. Diğer bilinmeyen özel şemalar
+    Linking.openURL(url).catch(() => {});
+    return false;
+  };
+
   const handleRetry = async () => {
     setIsLoading(true);
     setHasError(false);
@@ -218,7 +267,21 @@ export default function App() {
             incognito={false}
             cacheMode="LOAD_DEFAULT"
             allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
             allowsBackForwardNavigationGestures={true}
+            allowFileAccess={true}
+            allowFileAccessFromFileURLs={true}
+            allowUniversalAccessFromFileURLs={true}
+            geolocationEnabled={true}
+            setSupportMultipleWindows={false}
+            javaScriptCanOpenWindowsAutomatically={true}
+            onOpenWindow={(syntheticEvent) => {
+              const { targetUrl } = syntheticEvent.nativeEvent;
+              if (targetUrl) {
+                Linking.openURL(targetUrl).catch(() => {});
+              }
+            }}
+            onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             originWhitelist={['*']}
             mixedContentMode="always"
             pullToRefreshEnabled={true}
@@ -237,7 +300,15 @@ export default function App() {
             onLoadEnd={() => {
               setIsLoading(false);
             }}
-            onError={() => {
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              if (
+                nativeEvent?.description?.includes('ERR_UNKNOWN_URL_SCHEME') ||
+                nativeEvent?.description?.includes('net::ERR_ABORTED') ||
+                nativeEvent?.code === -999
+              ) {
+                return;
+              }
               setIsLoading(false);
               loadDeviceInfo().then(() => {
                 setHasError(true);
