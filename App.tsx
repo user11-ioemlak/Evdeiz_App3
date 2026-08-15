@@ -219,11 +219,35 @@ export default function App() {
         }
         return;
       }
+
+      // Kamera / Web'den gelen ekran görüntüsü (Snapshot) kaydetme ve paylaşma
+      if ((message.type === 'save_image' || message.type === 'download_image') && message.data) {
+        const filename = message.filename || `Kamera_${Date.now()}.png`;
+        // Data URL önekini temizle (data:image/png;base64,...)
+        const base64Data = typeof message.data === 'string' 
+          ? message.data.replace(/^data:image\/\w+;base64,/, '')
+          : message.data;
+
+        const imageFile = new File(Paths.cache, filename);
+        imageFile.write(base64Data, { encoding: 'base64' });
+
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(imageFile.uri, {
+            mimeType: 'image/png',
+            dialogTitle: 'Kamera Görüntüsünü Kaydet / Paylaş',
+            UTI: 'public.png',
+          });
+        } else {
+          Alert.alert('Bilgi', 'Fotoğraf kaydedildi: ' + imageFile.uri);
+        }
+        return;
+      }
     } catch (error) {
       console.warn('[App] WebView mesaj işleme hatası:', error);
       Alert.alert(
-        'PDF Hatası',
-        'PDF işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.'
+        'İşlem Hatası',
+        'Dosya işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.'
       );
     }
   }, []);
@@ -338,6 +362,7 @@ export default function App() {
             incognito={false}
             cacheMode="LOAD_DEFAULT"
             allowsInlineMediaPlayback={true}
+            allowsFullscreenVideo={true}
             mediaPlaybackRequiresUserAction={false}
             allowsBackForwardNavigationGestures={true}
             allowFileAccess={true}
