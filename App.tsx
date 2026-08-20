@@ -170,7 +170,7 @@ export default function App() {
         return;
       }
       try {
-        const projectId = appJson.expo?.extra?.eas?.projectId;
+        const projectId = appJson.expo?.extra?.eas?.projectId || "ea06fc18-0524-42b7-a3e7-3f8151ed553b"; // Fallback dummy projectId for standalone non-EAS builds
         token = (await Notifications.getExpoPushTokenAsync({
           projectId: projectId,
         })).data;
