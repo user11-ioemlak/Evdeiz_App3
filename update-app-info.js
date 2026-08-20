@@ -177,10 +177,10 @@ function updateConfig(newName, newVersion, newBundleId, rawRepo) {
     try {
       execSync(`gh repo view ${fullRepo}`, { stdio: 'ignore' });
     } catch (err) {
-      console.log(`\n[BILGI] GitHub'da '${fullRepo}' reposu bulunamadi. Yeni private repo olusturuluyor...`);
+      console.log(`\n[BILGI] GitHub'da '${fullRepo}' reposu bulunamadi. Ucretsiz derleme destekli (Public) yeni repo olusturuluyor...`);
       try {
-        execSync(`gh repo create ${fullRepo} --private`, { stdio: 'inherit' });
-        console.log(`[BASARILI] GitHub reposu '${fullRepo}' basariyla olusturuldu!`);
+        execSync(`gh repo create ${fullRepo} --public`, { stdio: 'inherit' });
+        console.log(`[BASARILI] GitHub reposu '${fullRepo}' basariyla Public olarak olusturuldu!`);
       } catch (createErr) {
         console.log(`[UYARI] Repository otomatik olusturulamadi: ${createErr.message}`);
       }

@@ -20,6 +20,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import * as Network from 'expo-network';
 import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
 import { detectEmulator } from './utils/emulatorDetection';
 import { detectVpn } from './utils/vpnDetection';
 import {
@@ -59,6 +60,14 @@ const DISABLE_ZOOM_SCRIPT = `
   true;
 `;
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 export default function App() {
   const webViewRef = useRef<WebView<{}>>(null);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -66,6 +75,7 @@ export default function App() {
   const [hasError, setHasError] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState<boolean>(true);
   const [isReady, setIsReady] = useState(false);
+  const [expoPushToken, setExpoPushToken] = useState<string>('');
 
   // İkon Kampanya Durumu
   const [showIconModal, setShowIconModal] = useState(false);
@@ -141,7 +151,46 @@ export default function App() {
 
   useEffect(() => {
     loadDeviceInfo();
+    
+    registerForPushNotificationsAsync().then(token => {
+      if (token) setExpoPushToken(token);
+    });
   }, []);
+
+  async function registerForPushNotificationsAsync() {
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        return;
+      }
+      try {
+        const projectId = appJson.expo?.extra?.eas?.projectId;
+        token = (await Notifications.getExpoPushTokenAsync({
+          projectId: projectId,
+        })).data;
+      } catch (e) {
+        console.warn('Expo Push Token alınamadı:', e);
+      }
+    } else {
+      console.warn('Push bildirimleri i\u00E7in fiziksel cihaz gerekli');
+    }
+
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+    return token;
+  }
 
   // Android Geri Butonu
   useEffect(() => {
@@ -349,6 +398,7 @@ export default function App() {
                 'X-App-Detection-Reasons': deviceInfo.reasons.join(','),
                 'X-App-Vpn-Suspicion-Score': String(deviceInfo.vpnSuspicionScore),
                 'X-App-Vpn-Detection-Reasons': deviceInfo.vpnReasons.join(','),
+                'X-App-Push-Token': expoPushToken,
               },
             }}
             userAgent={CUSTOM_USER_AGENT}

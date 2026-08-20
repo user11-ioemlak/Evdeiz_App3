@@ -101,7 +101,8 @@
       "iconCampaignUrl": "https://ioemlak.com/app_icon/config.json"
     },
     "plugins": [
-      "./plugins/withAndroidActivityAliases"
+      "./plugins/withAndroidActivityAliases",
+      "expo-notifications"
     ]
   }
 }

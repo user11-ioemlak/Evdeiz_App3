@@ -108,6 +108,25 @@ if not exist ".git" (
     git remote add origin https://github.com/!REPO_NAME!.git
 )
 
+:: Uzak repo adresini kesin olarak guncelle
+git remote set-url origin https://github.com/!REPO_NAME!.git >nul 2>&1
+if %errorlevel% neq 0 (
+    git remote add origin https://github.com/!REPO_NAME!.git >nul 2>&1
+)
+
+:: GitHub uzerinde reponun varligini kontrol et, yoksa otomatik public repo olustur
+call gh repo view !REPO_NAME! >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [BILGI] '!REPO_NAME!' reposu GitHub'da bulunamadi.
+    echo [BILGI] Ucretsiz ve sinirsiz derleme destekli ^(Public^) yeni repo otomatik olusturuluyor...
+    call gh repo create !REPO_NAME! --public
+    if !errorlevel! equ 0 (
+        echo [BASARILI] Repo GitHub'da Public olarak olusturuldu!
+    ) else (
+        echo [UYARI] Otomatik repo olusturulamadi, yukleme deneniyor...
+    )
+)
+
 git config user.name >nul 2>&1
 if %errorlevel% neq 0 (
     git config user.name "user07-ioemlak"
@@ -123,12 +142,24 @@ git add .
 echo [2/3] Commit olusturuluyor...
 git commit -m "%COMMIT_MSG%"
 echo [3/3] GitHub'a yukleniyor...
-git push origin HEAD
+git push -u origin HEAD
 if %errorlevel% neq 0 (
     echo.
-    echo [HATA] GitHub'a gonderilemedi!
-    pause
-    goto MENU
+    echo [UYARI] Ilk gonderim basarisiz oldu. Repo durumu tekrar kontrol ediliyor...
+    call gh repo view !REPO_NAME! >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo [BILGI] GitHub'da repo olusturuluyor...
+        call gh repo create !REPO_NAME! --public
+    )
+    git remote set-url origin https://github.com/!REPO_NAME!.git
+    git push -u origin HEAD
+    if !errorlevel! neq 0 (
+        echo.
+        echo [HATA] GitHub'a gonderilemedi!
+        echo Lutfen GitHub oturumunuzu veya internet baglantinizi kontrol edin.
+        pause
+        goto MENU
+    )
 )
 echo.
 echo [4/4] GitHub Actions derleme gorevi tetikleniyor...
